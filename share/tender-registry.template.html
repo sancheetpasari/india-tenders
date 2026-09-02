@@ -1,0 +1,666 @@
+<meta charset="utf-8">
+<title>India Tender Registry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600&display=swap">
+
+<style>
+:root{
+  --paper:#fafafc; --panel:#ffffff; --sunk:#f2f3f8;
+  --ink:#14172b; --muted:#676c85; --faint:#9297ad;
+  --rule:#e3e5ee; --rule-strong:#cfd3e2;
+  --accent:#2743a6; --accent-soft:#e8ecfa;
+  --urgent:#b42318; --urgent-bg:#fdeceb;
+  --soon:#b54708;   --soon-bg:#fdf1e3;
+  --open:#256c4c;   --open-bg:#e8f4ee;
+  --shadow:0 1px 2px rgba(20,23,43,.05), 0 2px 8px rgba(20,23,43,.04);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0e1017; --panel:#161927; --sunk:#1d2132;
+    --ink:#e7e9f2; --muted:#9aa0bb; --faint:#6d7391;
+    --rule:#262a3b; --rule-strong:#343954;
+    --accent:#8ba1f7; --accent-soft:#1c2340;
+    --urgent:#ff9384; --urgent-bg:#3a1a17;
+    --soon:#e8b06a;   --soon-bg:#372613;
+    --open:#6ed3a2;   --open-bg:#13301f;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0e1017; --panel:#161927; --sunk:#1d2132;
+  --ink:#e7e9f2; --muted:#9aa0bb; --faint:#6d7391;
+  --rule:#262a3b; --rule-strong:#343954;
+  --accent:#8ba1f7; --accent-soft:#1c2340;
+  --urgent:#ff9384; --urgent-bg:#3a1a17;
+  --soon:#e8b06a;   --soon-bg:#372613;
+  --open:#6ed3a2;   --open-bg:#13301f;
+  --shadow:none;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  font-size:14px; line-height:1.5;
+}
+.wrap{max-width:1560px;margin:0 auto;padding:26px 22px 72px}
+
+/* ---------- masthead ---------- */
+.masthead{
+  display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;justify-content:space-between;
+  padding-bottom:16px;border-bottom:2px solid var(--ink);
+}
+h1{
+  font-family:"IBM Plex Serif",Georgia,serif; font-weight:600;
+  font-size:clamp(24px,3.4vw,34px); margin:0; letter-spacing:-.4px; text-wrap:balance;
+}
+.eyebrow{
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);
+  font-weight:600;margin-bottom:6px;
+}
+.stamp{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px;color:var(--muted);
+  text-align:right;line-height:1.7;
+}
+.stamp b{color:var(--ink);font-weight:600}
+
+/* ---------- stat strip ---------- */
+.stats{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));
+  gap:1px;background:var(--rule);border:1px solid var(--rule);
+  margin:22px 0 20px;border-radius:3px;overflow:hidden;
+}
+.stat{background:var(--panel);padding:13px 16px}
+.stat .n{
+  font-family:"IBM Plex Mono",monospace;font-size:23px;font-weight:600;
+  letter-spacing:-.5px;font-variant-numeric:tabular-nums;
+}
+.stat .l{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.stat.is-urgent .n{color:var(--urgent)}
+.stat.is-soon .n{color:var(--soon)}
+
+/* ---------- controls ---------- */
+.controls{
+  position:sticky;top:0;z-index:30;background:var(--paper);
+  padding:12px 0;border-bottom:1px solid var(--rule);margin-bottom:2px;
+}
+.row1{display:grid;grid-template-columns:minmax(180px,1.4fr) 1.15fr 1fr 1fr 1.15fr .85fr auto;gap:10px;align-items:end}
+@media(max-width:960px){.row1{grid-template-columns:1fr 1fr}}
+label.fl{display:block;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+input[type=search],select{
+  width:100%;font:inherit;color:var(--ink);background:var(--panel);
+  border:1px solid var(--rule-strong);border-radius:3px;padding:8px 10px;
+}
+input[type=search]:focus-visible,select:focus-visible,button:focus-visible{
+  outline:2px solid var(--accent);outline-offset:1px;
+}
+.btn{
+  font:inherit;background:var(--panel);color:var(--ink);border:1px solid var(--rule-strong);
+  border-radius:3px;padding:8px 13px;cursor:pointer;white-space:nowrap;
+}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center}
+.chip{
+  font-size:12px;padding:4px 11px;border:1px solid var(--rule-strong);border-radius:2px;
+  background:var(--panel);cursor:pointer;color:var(--muted);
+}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+.spacer{flex:1}
+.hint{margin-top:9px;padding:8px 11px;border-left:3px solid var(--soon);
+  background:var(--soon-bg);color:var(--soon);font-size:12.5px;border-radius:0 3px 3px 0}
+.hint button{font:inherit;font-weight:600;color:inherit;background:none;border:0;
+  padding:0;text-decoration:underline;cursor:pointer}
+
+/* ---------- panels / charts ---------- */
+.grid2{display:grid;grid-template-columns:1.35fr 1fr;gap:18px;margin:20px 0}
+@media(max-width:960px){.grid2{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--rule);border-radius:3px;box-shadow:var(--shadow)}
+.panel > h2{
+  font-family:"IBM Plex Sans",sans-serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);margin:0;padding:11px 15px;border-bottom:1px solid var(--rule);font-weight:600;
+}
+.panel .body{padding:14px 15px}
+.bar{display:grid;grid-template-columns:132px 1fr 58px;gap:11px;align-items:center;margin-bottom:6px;font-size:12.5px}
+.bar .nm{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  cursor:pointer;background:none;border:0;padding:0;text-align:left;font:inherit}
+.bar .nm:hover{color:var(--accent);text-decoration:underline}
+.track{height:14px;background:var(--sunk);border-radius:2px;overflow:hidden}
+.fill{height:100%;background:var(--accent);border-radius:2px}
+.fill.u{background:var(--urgent)} .fill.s{background:var(--soon)} .fill.o{background:var(--open)}
+.bar .v{font-family:"IBM Plex Mono",monospace;font-size:12px;text-align:right;
+  color:var(--muted);font-variant-numeric:tabular-nums}
+
+/* ---------- ledger ---------- */
+.ledger{background:var(--panel);border:1px solid var(--rule);border-radius:3px;box-shadow:var(--shadow)}
+.ledger-head{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;justify-content:space-between;
+  padding:11px 15px;border-bottom:1px solid var(--rule)}
+.ledger-head h2{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0;font-weight:600}
+.scroller{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:960px}
+thead th{
+  position:sticky;top:0;z-index:10;background:var(--panel);text-align:left;
+  font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600;
+  padding:9px 12px;border-bottom:1px solid var(--rule-strong);white-space:nowrap;cursor:pointer;
+}
+thead th:hover{color:var(--accent)}
+thead th .ar{color:var(--accent);font-size:10px}
+tbody td{padding:10px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+tbody tr:hover td{background:var(--sunk)}
+td.stripe{padding:0;width:3px}
+td.stripe i{display:block;width:3px;height:100%;min-height:44px}
+.s-u{background:var(--urgent)} .s-s{background:var(--soon)} .s-o{background:var(--open)}
+.st{display:inline-block;font-size:11px;font-weight:600;color:var(--accent);
+  background:var(--accent-soft);padding:2px 7px;border-radius:2px;white-space:nowrap;
+  text-decoration:none}
+a.st:hover{text-decoration:underline}
+.dept{color:var(--muted);font-size:12.5px;max-width:220px}
+.reg{margin-top:4px;font-size:11px;color:var(--faint);max-width:150px;
+  overflow:hidden;text-overflow:ellipsis}
+.ttl{font-weight:500;max-width:620px;line-height:1.45}
+.idlink{color:var(--accent);text-decoration:none}
+.idlink:hover{text-decoration:underline}
+.idline{
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--faint);margin-top:4px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:620px;
+}
+.amt{font-family:"IBM Plex Mono",monospace;font-size:12.5px;font-variant-numeric:tabular-nums;
+  white-space:nowrap;text-align:right}
+.dt{font-family:"IBM Plex Mono",monospace;font-size:12px;white-space:nowrap;
+  font-variant-numeric:tabular-nums;color:var(--muted)}
+.left{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:11.5px;font-weight:600;
+  padding:2px 8px;border-radius:2px;white-space:nowrap}
+.l-u{background:var(--urgent-bg);color:var(--urgent)}
+.l-s{background:var(--soon-bg);color:var(--soon)}
+.l-o{background:var(--open-bg);color:var(--open)}
+.pager{display:flex;gap:12px;align-items:center;justify-content:center;padding:14px;flex-wrap:wrap}
+.pager .info{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted)}
+.btn[disabled]{opacity:.4;cursor:default}
+.btn[disabled]:hover{border-color:var(--rule-strong);color:var(--ink)}
+.empty{padding:56px 20px;text-align:center;color:var(--muted)}
+
+/* ---------- footer ---------- */
+.notes{margin-top:22px;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:960px){.notes{grid-template-columns:1fr}}
+.notes p{margin:0 0 10px;color:var(--muted);font-size:12.5px;max-width:62ch}
+.notes b{color:var(--ink)}
+.cov{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:5px}
+.cov div{display:flex;justify-content:space-between;gap:8px;font-size:12px;
+  padding:5px 9px;background:var(--sunk);border-radius:2px}
+.cov span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cov b{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+.toast{
+  position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(14px);
+  background:var(--ink);color:var(--paper);padding:9px 16px;border-radius:3px;font-size:13px;
+  opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;z-index:99;
+}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+
+  <div class="masthead">
+    <div>
+      <div class="eyebrow" id="eyebrow">Public procurement</div>
+      <h1>India Tender Registry</h1>
+    </div>
+    <div class="stamp" id="stamp"></div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="controls">
+    <div class="row1">
+      <div>
+        <label class="fl" for="q">Search title, department, tender ID</label>
+        <input id="q" type="search" placeholder="solar, road works, hospital, 2026_PWD&hellip;" autocomplete="off">
+      </div>
+      <div>
+        <label class="fl" for="fwork">Work type</label>
+        <select id="fwork">
+          <option value="">All work</option>
+          <option value="ca">My sector 1 &mdash; audit / tax / accounting</option>
+          <option value="consult">My sector 2 &mdash; other consultancy / PMC</option>
+          <option value="both">My sector &mdash; both groups</option>
+          <option value="other">Everything else</option>
+        </select>
+      </div>
+      <div>
+        <label class="fl" for="fregion">Location (state)</label>
+        <select id="fregion"></select>
+      </div>
+      <div>
+        <label class="fl" for="fstate">Source portal</label>
+        <select id="fstate"></select>
+      </div>
+      <div>
+        <label class="fl" for="forg">Department</label>
+        <select id="forg"></select>
+      </div>
+      <div>
+        <label class="fl" for="fdays">Closing within</label>
+        <select id="fdays">
+          <option value="">Any time</option>
+          <option value="1">24 hours</option>
+          <option value="2">48 hours</option>
+          <option value="3">3 days</option>
+          <option value="7">7 days</option>
+          <option value="14">14 days</option>
+        </select>
+      </div>
+      <div><button class="btn" id="reset">Reset</button></div>
+    </div>
+    <div class="chips">
+      <button class="chip" id="c48" aria-pressed="false">Closing in 48 h</button>
+      <button class="chip" id="cnew" aria-pressed="false">Published in 24 h</button>
+      <button class="chip" id="cval" aria-pressed="false">Has contract value</button>
+      <button class="chip" id="cwork" aria-pressed="false">Works</button>
+      <button class="chip" id="cgoods" aria-pressed="false">Supply / goods</button>
+      <button class="chip" id="csvc" aria-pressed="false">Services</button>
+      <span class="spacer"></span>
+      <button class="chip" id="copy">Copy page as TSV</button>
+      <button class="chip" id="theme">Theme</button>
+    </div>
+    <div class="hint" id="xhint" hidden></div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>Open tenders by state &mdash; click to filter</h2>
+      <div class="body" id="chart-state"></div>
+    </div>
+    <div class="panel">
+      <h2>When bidding closes</h2>
+      <div class="body" id="chart-time"></div>
+    </div>
+  </div>
+
+  <div class="ledger">
+    <div class="ledger-head">
+      <h2 id="lhead">Tenders</h2>
+      <span class="info" id="sorted"></span>
+    </div>
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr>
+            <th aria-hidden="true" style="width:3px;padding:0"></th>
+            <th data-k="state">State</th>
+            <th data-k="org">Department</th>
+            <th data-k="title">Tender</th>
+            <th data-k="ecv" style="text-align:right">Contract value</th>
+            <th data-k="published">Published</th>
+            <th data-k="closing">Bid closes</th>
+            <th data-k="closing">Left</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div class="pager">
+      <button class="btn" id="prev">&larr; Previous</button>
+      <span class="info" id="pinfo"></span>
+      <button class="btn" id="next">Next &rarr;</button>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="panel">
+      <h2>Where this comes from</h2>
+      <div class="body">
+        <p id="capnote" style="display:none"></p>
+        <p>Every row was read from the state's own e-procurement portal &mdash; the public
+           "tenders by closing date" listing, no login and no captcha involved.
+           This is an aggregated working view, not an official government service.
+           <b>Confirm on the source portal before bidding</b>: the tender document,
+           its corrigenda and the closing time there are what count.
+           <b>Click a state</b> to open its portal, then search the tender ID
+           shown under each title &mdash; the portals issue per-session links that
+           cannot be bookmarked, so a direct link would break.</p>
+        <p><b>Coverage is 35 of 36 states and union territories.</b> Karnataka is
+           absent because its tender search sits behind a captcha. Andaman &amp; Nicobar
+           and Lakshadweep publish through the central CPPP portal, and Ladakh through
+           the Jammu &amp; Kashmir one.</p>
+        <p><b>Contract value</b> is shown where the portal publishes it &mdash; Andhra Pradesh,
+           Telangana, Gujarat, Bihar and Chhattisgarh do; the NIC portals used by the
+           other states do not.</p>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Tenders held per source</h2>
+      <div class="body"><div class="cov" id="cov"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script id="payload" type="application/gzip-base64">__PAYLOAD__</script>
+<script>
+(async function(){
+"use strict";
+
+// The dataset ships gzipped + base64 so the whole thing fits the page limit
+// (21 MB of JSON -> ~6.6 MB embedded). Inflate it before anything else runs.
+async function loadPayload(){
+  const b64 = document.getElementById('payload').textContent.trim();
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for(let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  if(typeof DecompressionStream === 'undefined')
+    throw new Error('This browser cannot decompress the data. '
+                  + 'Please use a current Chrome, Edge, Firefox or Safari.');
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return JSON.parse(await new Response(stream).text());
+}
+
+let D;
+try {
+  D = await loadPayload();
+} catch (err) {
+  document.querySelector('.wrap').insertAdjacentHTML('afterbegin',
+    `<div class="hint" style="margin:16px 0">Could not load the tender data: `
+    + `${String(err.message || err).replace(/[<>&]/g, '')}</div>`);
+  throw err;
+}
+const $ = id => document.getElementById(id);
+const MON = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+const nf = new Intl.NumberFormat('en-IN');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function parseDT(s){
+  const m = /^(\d{2})-([A-Za-z]{3})-(\d{4})(?:\s+(\d{1,2}):(\d{2})\s*(AM|PM))?/.exec(s||'');
+  if(!m) return null;
+  let h = m[4] ? +m[4] : 0;
+  if(m[6]==='PM' && h<12) h+=12;
+  if(m[6]==='AM' && h===12) h=0;
+  return new Date(+m[3], MON[m[2]], +m[1], h, m[5]?+m[5]:0);
+}
+
+// [stateIdx, orgIdx, id, title, published, closing, ecv]
+const PORTAL = D.portals || [];
+const ALL = D.rows.map(r => {
+  const o = {st:D.states[r[0]], sti:r[0], org:D.orgs[r[1]], id:r[2], title:r[3],
+             published:r[4], closing:r[5], ecv:r[6], region:r[7]||'', sector:r[8]||'', doc:r[9]||''};
+  o._regions = o.region.split(',').map(x=>x.trim()).filter(Boolean);
+  o._c = parseDT(o.closing); o._p = parseDT(o.published);
+  o._hay = (o.title+' '+o.org+' '+o.id+' '+o.st).toLowerCase();
+  return o;
+});
+
+let VIEW = [], page = 1, PER = 50, sortK = 'closing', sortDir = 1;
+
+function money(v){
+  const n = parseFloat(v);
+  if(!isFinite(n) || n<=0) return '<span style="color:var(--faint)">\u2014</span>';
+  if(n >= 1e7) return '\u20b9'+(n/1e7).toFixed(2).replace(/\.00$/,'')+' cr';
+  if(n >= 1e5) return '\u20b9'+(n/1e5).toFixed(2).replace(/\.00$/,'')+' L';
+  return '\u20b9'+nf.format(Math.round(n));
+}
+function left(d, now){
+  if(!d) return {t:'\u2014', c:'o', h:1e9};
+  const h = (d-now)/36e5;
+  if(h < 0)  return {t:'closed', c:'u', h};
+  if(h < 24) return {t:Math.max(1,Math.round(h))+' h', c:'u', h};
+  const dd = Math.round(h/24);
+  return {t:dd+' d', c: h<72 ? 's' : 'o', h};
+}
+
+function activeChips(){
+  return ['c48','cnew','cval','cwork','cgoods','csvc']
+    .filter(id => $(id).getAttribute('aria-pressed')==='true');
+}
+
+function apply(){
+  const q = $('q').value.trim().toLowerCase();
+  const st = $('fstate').value, org = $('forg').value, days = $('fdays').value;
+  const reg = $('fregion').value, work = $('fwork').value;
+  const on = activeChips(), now = new Date();
+  VIEW = ALL.filter(t => {
+    if(t._c && t._c < now) return false;                 // open tenders only
+    if(work === 'ca'      && t.sector !== 'ca') return false;
+    if(work === 'consult' && t.sector !== 'consult') return false;
+    if(work === 'both'    && !t.sector) return false;
+    if(work === 'other'   && t.sector) return false;
+    if(reg && !t._regions.includes(reg)) return false;
+    if(st && t.st !== st) return false;
+    if(org && t.org !== org) return false;
+    if(days){ if(!t._c) return false;
+      const h = (t._c-now)/36e5; if(h < 0 || h > days*24) return false; }
+    if(q && !t._hay.includes(q)) return false;
+    for(const c of on){
+      if(c==='c48'  && !(t._c && (t._c-now)/36e5 <= 48)) return false;
+      if(c==='cnew' && !(t._p && (now-t._p)/36e5 <= 24)) return false;
+      if(c==='cval' && !(parseFloat(t.ecv) > 0)) return false;
+      if(c==='cwork'  && !/\b(work|construction|repair|road|building|civil|bridge)/i.test(t.title)) return false;
+      if(c==='cgoods' && !/\b(supply|procure|purchase|goods|equipment|material)/i.test(t.title)) return false;
+      if(c==='csvc'   && !/\b(service|hiring|maintenance|consultanc|amc|manpower)/i.test(t.title)) return false;
+    }
+    return true;
+  });
+  VIEW.sort((a,b) => {
+    let x, y;
+    if(sortK==='closing' || sortK==='published'){
+      const k = sortK==='closing' ? '_c' : '_p';
+      x = a[k] ? a[k].getTime() : 8e15; y = b[k] ? b[k].getTime() : 8e15;
+    } else if(sortK==='ecv'){
+      x = parseFloat(a.ecv)||-1; y = parseFloat(b.ecv)||-1;
+    } else {
+      x = (a[sortK==='org'?'org':sortK==='state'?'st':'title']||'').toLowerCase();
+      y = (b[sortK==='org'?'org':sortK==='state'?'st':'title']||'').toLowerCase();
+    }
+    return x<y ? -sortDir : x>y ? sortDir : 0;
+  });
+  page = 1; draw();
+}
+
+function draw(){
+  const now = new Date();
+  const inH = h => VIEW.filter(t => t._c && (t._c-now)/36e5 <= h).length;
+  const stats = [
+    ['Open tenders', nf.format(VIEW.length), ''],
+    ['States / UTs', new Set(VIEW.map(t=>t.st)).size, ''],
+    ['Closing in 48 h', nf.format(inH(48)), 'is-urgent'],
+    ['Closing in 7 days', nf.format(inH(168)), 'is-soon'],
+    ['Published in 24 h', nf.format(VIEW.filter(t=>t._p && (now-t._p)/36e5<=24).length), ''],
+    ['Departments', nf.format(new Set(VIEW.map(t=>t.org)).size), '']
+  ];
+  $('stats').innerHTML = stats.map(([l,n,c]) =>
+    `<div class="stat ${c}"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
+
+  const by = {};
+  VIEW.forEach(t => by[t.st] = (by[t.st]||0)+1);
+  const top = Object.entries(by).sort((a,b)=>b[1]-a[1]).slice(0,13);
+  const mx = Math.max(1, ...top.map(p=>p[1]));
+  $('chart-state').innerHTML = top.map(([k,v]) =>
+    `<div class="bar"><button class="nm" data-st="${esc(k)}" title="${esc(k)}">${esc(k)}</button>`+
+    `<div class="track"><div class="fill" style="width:${(v/mx*100).toFixed(1)}%"></div></div>`+
+    `<div class="v">${nf.format(v)}</div></div>`).join('') ||
+    '<p style="color:var(--muted);margin:0">No tenders match.</p>';
+
+  const buckets = [['Today',0,'u'],['Tomorrow',0,'u'],['2\u20133 days',0,'s'],
+                   ['4\u20137 days',0,'o'],['8\u201314 days',0,'o'],['Later',0,'o']];
+  VIEW.forEach(t => { if(!t._c) return; const h=(t._c-now)/36e5; if(h<0) return;
+    buckets[h<24?0:h<48?1:h<=72?2:h<=168?3:h<=336?4:5][1]++; });
+  const bmx = Math.max(1, ...buckets.map(b=>b[1]));
+  $('chart-time').innerHTML = buckets.map(([k,v,c]) =>
+    `<div class="bar"><span class="nm" style="cursor:default">${k}</span>`+
+    `<div class="track"><div class="fill ${c}" style="width:${(v/bmx*100).toFixed(1)}%"></div></div>`+
+    `<div class="v">${nf.format(v)}</div></div>`).join('');
+
+  const start = (page-1)*PER, slice = VIEW.slice(start, start+PER);
+  $('rows').innerHTML = slice.length ? slice.map(t => {
+    const L = left(t._c, now);
+    return `<tr>`+
+      `<td class="stripe"><i class="s-${L.c}"></i></td>`+
+      `<td>${PORTAL[t.sti]
+            ? `<a class="st" href="${esc(PORTAL[t.sti])}" target="_blank" rel="noopener"
+                  title="Open the ${esc(t.st)} portal, then search this tender ID">${esc(t.st)}</a>`
+            : `<span class="st">${esc(t.st)}</span>`}${
+          (t.region && t.region !== t.st)
+            ? `<div class="reg" title="Delivery / consignee state">${esc(t.region)}</div>` : ''}</td>`+
+      `<td class="dept">${esc(t.org)||'\u2014'}</td>`+
+      `<td class="ttl">${esc(t.title)||'(untitled)'}<div class="idline">${t.doc
+          ? `<a class="idlink" href="https://bidplus.gem.gov.in/showbidDocument/${esc(t.doc)}"
+                target="_blank" rel="noopener" title="Open this bid document on GeM">${esc(t.id)}</a>`
+          : esc(t.id)}</div></td>`+
+      `<td class="amt">${money(t.ecv)}</td>`+
+      `<td class="dt">${esc(t.published)||'\u2014'}</td>`+
+      `<td class="dt">${esc(t.closing)}</td>`+
+      `<td><span class="left l-${L.c}">${L.t}</span></td></tr>`;
+  }).join('') : `<tr><td colspan="8" class="empty">No tenders match these filters.</td></tr>`;
+
+  const pages = Math.max(1, Math.ceil(VIEW.length/PER));
+  $('pinfo').textContent = `page ${page} / ${nf.format(pages)}`;
+  $('prev').disabled = page<=1; $('next').disabled = page>=pages;
+  $('lhead').textContent = `Tenders \u2014 ${nf.format(Math.min(PER, Math.max(0,VIEW.length-start)))} of ${nf.format(VIEW.length)}`;
+  const names = {state:'state',org:'department',title:'tender',ecv:'contract value',
+                 published:'published',closing:'bid close'};
+  $('sorted').textContent = `sorted by ${names[sortK]} ${sortDir>0?'\u2191':'\u2193'}`;
+}
+
+// ---- build controls
+$('eyebrow').textContent =
+  `Public procurement · ${D.states.length} state, central & marketplace sources`;
+$('stamp').innerHTML = `snapshot <b>${esc(D.generated_at)}</b><br>`+
+  `${nf.format(D.rows.length)} tenders \u00b7 closing within ${esc(D.window)} days`;
+$('fstate').innerHTML = '<option value="">All sources</option>' +
+  D.states.map(s=>`<option>${esc(s)}</option>`).join('');
+// A source portal is not a geography. GeM and the central portals publish no
+// location field, so picking "Assam" shows the Assam portal only. Say so, and
+// offer the keyword sweep that does span every source.
+const CENTRAL = new Set(['GeM','ONGC','Central (CPPP)','Central (etenders)',
+                         'Defence (MoD)','Coal India','NTPC']);
+function syncHint(){
+  const st = $('fstate').value, el = $('xhint');
+  if(!st || CENTRAL.has(st)){ el.hidden = true; return; }
+  const n = ALL.filter(t => t.st !== st && t._regions.includes(st)).length;
+  el.hidden = false;
+  el.innerHTML = `Showing the <b>${esc(st)}</b> portal only. GeM and the central portals `+
+    `are separate sources. Use <b>Location</b> to see every source at once. ` +
+    (n ? `<button id="sweep">Show all ${esc(st)} tenders</button>` : '');
+  const sw = document.getElementById('sweep');
+  if(sw) sw.onclick = () => { $('fstate').value = ''; $('fregion').value = st;
+                              syncOrgOptions(); syncHint(); apply(); };
+}
+
+// Departments belong to a state, so the list follows the state selection
+// rather than offering every department in the country at once.
+function buildRegionOptions(){
+  const keep = $('fregion').value;
+  const all = new Set();
+  ALL.forEach(t => t._regions.forEach(r => all.add(r)));
+  const list = [...all].sort();
+  $('fregion').innerHTML =
+    `<option value="">Anywhere in India (${nf.format(list.length)} states)</option>` +
+    list.map(r => `<option>${esc(r)}</option>`).join('');
+  $('fregion').value = list.includes(keep) ? keep : '';
+}
+
+function syncOrgOptions(){
+  const st = $('fstate').value, keep = $('forg').value;
+  const orgs = [...new Set(ALL.filter(t => !st || t.st === st)
+                              .map(t => t.org).filter(Boolean))].sort();
+  $('forg').innerHTML =
+    `<option value="">All departments${st ? ` in ${esc(st)}` : ''} (${nf.format(orgs.length)})</option>` +
+    orgs.map(o => `<option>${esc(o)}</option>`).join('');
+  $('forg').value = orgs.includes(keep) ? keep : '';
+}
+buildRegionOptions();
+syncOrgOptions();
+syncHint();
+{ const core = ALL.filter(t => t.sector === 'ca').length;
+  const cons = ALL.filter(t => t.sector === 'consult').length;
+  const o = $('fwork').options;
+  o[1].text = `My sector 1 — audit / tax / accounting (${nf.format(core)})`;
+  o[2].text = `My sector 2 — other consultancy / PMC (${nf.format(cons)})`;
+  o[3].text = `My sector — both groups (${nf.format(core + cons)})`;
+  o[4].text = `Everything else (${nf.format(ALL.length - core - cons)})`; }
+
+const counts = {};
+ALL.forEach(t => counts[t.st] = (counts[t.st]||0)+1);
+$('cov').innerHTML = Object.entries(counts).sort((a,b)=>b[1]-a[1])
+  .map(([k,v])=>`<div><span>${esc(k)}</span><b>${nf.format(v)}</b></div>`).join('');
+
+['q','fstate','forg','fdays','fregion','fwork'].forEach(id =>
+  $(id).addEventListener(id==='q' ? 'input' : 'change', () => {
+    if(id==='fstate'){ syncOrgOptions(); syncHint(); }
+    apply();
+  }));
+['c48','cnew','cval','cwork','cgoods','csvc'].forEach(id => $(id).addEventListener('click', () => {
+  const b = $(id); b.setAttribute('aria-pressed', b.getAttribute('aria-pressed')==='true' ? 'false':'true');
+  apply();
+}));
+$('reset').addEventListener('click', () => {
+  ['q','fstate','forg','fdays','fregion','fwork'].forEach(i => $(i).value='');
+  activeChips().forEach(i => $(i).setAttribute('aria-pressed','false'));
+  syncOrgOptions();
+  syncHint();
+  apply();
+});
+$('chart-state').addEventListener('click', e => {
+  const b = e.target.closest('[data-st]'); if(!b) return;
+  $('fstate').value = b.dataset.st; syncOrgOptions(); syncHint(); apply();
+  document.querySelector('.ledger').scrollIntoView({behavior:'smooth', block:'start'});
+});
+document.querySelectorAll('th[data-k]').forEach(th => th.addEventListener('click', () => {
+  const k = th.dataset.k;
+  if(sortK===k) sortDir = -sortDir; else { sortK = k; sortDir = (k==='ecv') ? -1 : 1; }
+  apply();
+}));
+$('prev').addEventListener('click', () => { if(page>1){ page--; draw();
+  document.querySelector('.ledger').scrollIntoView({behavior:'smooth', block:'start'}); }});
+$('next').addEventListener('click', () => { page++; draw();
+  document.querySelector('.ledger').scrollIntoView({behavior:'smooth', block:'start'}); });
+
+function toast(msg){
+  const el = $('toast'); el.textContent = msg; el.classList.add('on');
+  clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('on'), 2200);
+}
+$('copy').addEventListener('click', async () => {
+  const start = (page-1)*PER;
+  const rows = VIEW.slice(start, start+PER);
+  const tsv = ['State\tDepartment\tTender\tTender ID\tContract value\tPublished\tBid closes']
+    .concat(rows.map(t => [t.st,t.org,t.title,t.id,t.ecv||'',t.published,t.closing]
+      .map(v => String(v).replace(/[\t\n]/g,' ')).join('\t'))).join('\n');
+  try{
+    await navigator.clipboard.writeText(tsv);
+    toast(`Copied ${rows.length} rows \u2014 paste into a spreadsheet`);
+  }catch(_){
+    const ta = document.createElement('textarea');
+    ta.value = tsv; ta.style.cssText='position:fixed;opacity:0';
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); toast(`Copied ${rows.length} rows`); }
+    catch(e){ toast('Copy blocked by the browser'); }
+    ta.remove();
+  }
+});
+$('theme').addEventListener('click', () => {
+  const cur = document.documentElement.getAttribute('data-theme');
+  const dark = matchMedia('(prefers-color-scheme:dark)').matches;
+  const next = cur==='dark' ? 'light' : cur==='light' ? 'dark' : (dark ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-theme', next);
+  try{ localStorage.setItem('tender-registry-theme', next); }catch(_){}
+});
+try{
+  const saved = localStorage.getItem('tender-registry-theme');
+  if(saved) document.documentElement.setAttribute('data-theme', saved);
+}catch(_){}
+
+if(D.capped_from && $('capnote')){
+  const el = $('capnote');
+  el.style.display = '';
+  el.innerHTML = `<b>This shared copy is trimmed.</b> The full dataset holds `+
+    `${nf.format(D.capped_from)} tenders; to stay inside the 16&nbsp;MB page limit this `+
+    `copy carries the ${nf.format(D.rows.length)} closing within ${esc(D.window)} days. `+
+    `Anything closing later is in the full dashboard, not here.`;
+}
+
+// keep "time left" honest while the page stays open
+setInterval(() => { if(VIEW.length || ALL.length) apply(); }, 60000);
+apply();
+})();
+</script>

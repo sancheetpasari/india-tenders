@@ -1,0 +1,85 @@
+name: Refresh tenders
+
+# 00:00 and 12:00 IST. GitHub cron is UTC, and IST is UTC+5:30.
+on:
+  schedule:
+    - cron: "30 18 * * *"   # 00:00 IST
+    - cron: "30 6 * * *"    # 12:00 IST
+  workflow_dispatch:         # and a "Run workflow" button
+
+# never let two scrapes overlap; the later one waits rather than doubling
+# the load on every portal
+concurrency:
+  group: tender-refresh
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Chromium (needed for Gujarat and Bihar)
+        run: python -m playwright install --with-deps chromium
+
+      - name: Scrape every portal
+        run: python scraper.py --window 14 --workers 12 --passes 5 --conc 3 --deadline 900
+
+      - name: Sanity-check the harvest
+        # Indian government portals sometimes refuse cloud IP ranges. If that
+        # happens the scrape "succeeds" with almost nothing, so fail loudly
+        # rather than publishing an empty dashboard over a good one.
+        run: |
+          python - <<'PY'
+          import json, sys
+          d = json.load(open("tenders.json", encoding="utf-8"))
+          n = d["count"]
+          ok = [s for s in d["sources"] if s["status"] == "ok"]
+          print(f"{n:,} tenders from {len(ok)} sources")
+          for s in sorted(d["sources"], key=lambda x: -x["count"])[:10]:
+              print(f"  {s['state']:<22}{s['count']:>7,}  {s['status']}")
+          if n < 20000 or len(ok) < 15:
+              sys.exit(f"::error::only {n:,} tenders from {len(ok)} sources -- "
+                       "portals are probably blocking the runner's IP")
+          PY
+
+      - name: Build the page
+        run: python build_artifact.py
+
+      - name: Assemble the site
+        run: |
+          mkdir -p _site
+          cp share/tender-registry.html _site/index.html
+          cp tenders.csv _site/tenders.csv
+          gzip -9 -c tenders.json > _site/tenders.json.gz
+          ls -lh _site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: refresh
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

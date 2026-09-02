@@ -1,0 +1,6 @@
+requests>=2.31
+beautifulsoup4>=4.12
+
+# Needed only for Gujarat and Bihar (browser_adapters.py).
+# After installing:  python -m playwright install chromium
+playwright>=1.40

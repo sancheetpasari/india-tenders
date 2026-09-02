@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>India State Tenders — Live Dashboard</title>
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#14181f; --muted:#5c6675; --line:#e2e6ec;
+  --accent:#1a56db; --accent-soft:#e8efff;
+  --hot:#c2410c; --hot-bg:#fff1e8; --warn:#a16207; --warn-bg:#fdf5e0; --ok:#15803d; --ok-bg:#e9f6ed;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.04);
+}
+:root:not([data-theme="light"]){ }
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1116; --panel:#161b22; --ink:#e6edf3; --muted:#8b949e; --line:#262c36;
+    --accent:#4c8dff; --accent-soft:#16233d;
+    --hot:#ff9060; --hot-bg:#3a1d10; --warn:#e3b341; --warn-bg:#3a2f10; --ok:#56d364; --ok-bg:#11301b;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1116; --panel:#161b22; --ink:#e6edf3; --muted:#8b949e; --line:#262c36;
+  --accent:#4c8dff; --accent-soft:#16233d;
+  --hot:#ff9060; --hot-bg:#3a1d10; --warn:#e3b341; --warn-bg:#3a2f10; --ok:#56d364; --ok-bg:#11301b;
+  --shadow:none;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+.wrap{max-width:1500px;margin:0 auto;padding:20px 20px 60px}
+header{display:flex;flex-wrap:wrap;gap:14px;align-items:baseline;justify-content:space-between;margin-bottom:6px}
+h1{font-size:21px;margin:0;letter-spacing:-.2px}
+.sub{color:var(--muted);font-size:13px}
+button,select,input{font:inherit;color:inherit}
+.btn{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:7px 12px;cursor:pointer}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.primary:hover{opacity:.9;color:#fff}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px;margin:18px 0}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow)}
+.kpi .n{font-size:26px;font-weight:650;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.kpi .l{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);margin-bottom:16px}
+.panel h2{font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);
+  margin:0;padding:12px 16px;border-bottom:1px solid var(--line)}
+.panel .body{padding:14px 16px}
+
+.filters{display:grid;grid-template-columns:1.5fr 1.25fr 1fr 1fr 1.1fr .85fr auto;gap:10px;align-items:end}
+.filters label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+.filters input,.filters select{width:100%;background:var(--bg);border:1px solid var(--line);
+  border-radius:7px;padding:8px 10px}
+.filters input:focus,.filters select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+@media(max-width:980px){.filters{grid-template-columns:1fr 1fr}}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:4px 11px;
+  font-size:12px;cursor:pointer;white-space:nowrap}
+.chip:hover{border-color:var(--accent)}
+.chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+.charts{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
+@media(max-width:980px){.charts{grid-template-columns:1fr}}
+.bar-row{display:grid;grid-template-columns:130px 1fr 52px;gap:10px;align-items:center;margin-bottom:5px;font-size:12.5px}
+.bar-row .nm{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.bar-row .nm:hover{color:var(--accent)}
+.bar-track{background:var(--bg);border-radius:4px;height:16px;overflow:hidden}
+.bar-fill{height:100%;background:var(--accent);border-radius:4px}
+.bar-row .v{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+
+table{width:100%;border-collapse:collapse}
+.tablewrap{overflow-x:auto}
+th{position:sticky;top:0;background:var(--panel);text-align:left;font-size:12px;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.4px;padding:10px 12px;border-bottom:1px solid var(--line);
+  cursor:pointer;white-space:nowrap;z-index:2}
+th:hover{color:var(--accent)}
+td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:hover td{background:var(--bg)}
+.ttl{font-weight:500;max-width:520px}
+.ttl a{color:inherit;text-decoration:none}
+.ttl a:hover{color:var(--accent);text-decoration:underline}
+.meta{color:var(--muted);font-size:12px;margin-top:3px;max-width:520px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.p-hot{background:var(--hot-bg);color:var(--hot)}
+.p-warn{background:var(--warn-bg);color:var(--warn)}
+.p-ok{background:var(--ok-bg);color:var(--ok)}
+.st{display:inline-block;padding:2px 8px;border-radius:5px;background:var(--accent-soft);
+  color:var(--accent);font-size:11.5px;font-weight:600;white-space:nowrap}
+.nowrap{white-space:nowrap;font-variant-numeric:tabular-nums}
+.dept{max-width:210px;color:var(--muted);font-size:12.5px}
+.reg{margin-top:4px;font-size:11.5px;color:var(--muted);max-width:150px;
+  overflow:hidden;text-overflow:ellipsis}
+
+.pager{display:flex;gap:8px;align-items:center;justify-content:center;padding:14px}
+.note{color:var(--muted);font-size:12.5px}
+.cov{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.cov div{font-size:12.5px;display:flex;justify-content:space-between;gap:8px;
+  padding:6px 10px;background:var(--bg);border-radius:6px}
+.cov .z{color:var(--muted)}
+.warnbox{background:var(--warn-bg);color:var(--warn);border:1px solid var(--line);
+  border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:16px}
+.loading{text-align:center;padding:60px;color:var(--muted)}
+.livedot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);
+  margin-right:5px;vertical-align:middle;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.ck{display:inline-flex;align-items:center;gap:7px;margin-top:11px;
+  font-size:12.5px;color:var(--muted);cursor:pointer}
+.ck input{accent-color:var(--accent);cursor:pointer}
+.hint{margin-top:9px;padding:8px 11px;border-left:3px solid var(--warn);
+  background:var(--warn-bg);color:var(--warn);font-size:12.5px;border-radius:0 4px 4px 0}
+.hint button{font:inherit;font-weight:600;color:inherit;background:none;border:0;
+  padding:0;text-decoration:underline;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>India State Tenders — Active Bid Opportunities</h1>
+    <div class="sub" id="sub">Loading…</div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn" id="theme">Theme</button>
+    <button class="btn primary" id="export">Export CSV</button>
+  </div>
+</header>
+
+<div id="app" class="loading">Loading tender data…</div>
+
+<template id="tpl">
+<div class="kpis">
+  <div class="kpi"><div class="n" id="k-total">–</div><div class="l">Open tenders shown</div></div>
+  <div class="kpi"><div class="n" id="k-states">–</div><div class="l">States / UTs</div></div>
+  <div class="kpi"><div class="n" id="k-48">–</div><div class="l">Closing in 48 h</div></div>
+  <div class="kpi"><div class="n" id="k-week">–</div><div class="l">Closing in 7 days</div></div>
+  <div class="kpi"><div class="n" id="k-new">–</div><div class="l">Published in 24 h</div></div>
+  <div class="kpi"><div class="n" id="k-org">–</div><div class="l">Departments</div></div>
+</div>
+
+<div class="panel"><div class="body">
+  <div class="filters">
+    <div><label for="q">Search title, department, reference or tender ID</label>
+      <input id="q" type="search" placeholder="e.g. solar, road works, hospital, 2026_PWD…"></div>
+    <div><label for="f-work">Work type</label><select id="f-work">
+      <option value="">All work</option>
+      <option value="ca">My sector 1 &mdash; audit / tax / accounting</option>
+      <option value="consult">My sector 2 &mdash; other consultancy / PMC</option>
+      <option value="both">My sector &mdash; both groups</option>
+      <option value="other">Everything else</option>
+    </select></div>
+    <div><label for="f-region">Location (state)</label><select id="f-region"></select></div>
+    <div><label for="f-state">Source portal</label><select id="f-state"></select></div>
+    <div><label for="f-org">Department</label><select id="f-org"></select></div>
+    <div><label for="f-days">Closing within</label><select id="f-days">
+      <option value="">Any time</option><option value="1">24 hours</option>
+      <option value="2">48 hours</option><option value="3">3 days</option>
+      <option value="7">7 days</option><option value="14">14 days</option></select></div>
+    <div><button class="btn" id="reset">Reset</button></div>
+  </div>
+  <div class="chips" id="chips"></div>
+  <label class="ck"><input type="checkbox" id="f-closed">
+    Include tenders whose bid deadline has already passed</label>
+  <div class="hint" id="xhint" hidden></div>
+</div></div>
+
+<div class="charts">
+  <div class="panel"><h2>Tenders by state <span class="note">(click to filter)</span></h2>
+    <div class="body" id="chart-state"></div></div>
+  <div class="panel"><h2>Bid closing timeline</h2>
+    <div class="body" id="chart-time"></div></div>
+</div>
+
+<div class="panel">
+  <h2 id="tblhead">Tenders</h2>
+  <div class="tablewrap"><table>
+    <thead><tr>
+      <th data-sort="state">State</th>
+      <th data-sort="organisation">Department</th>
+      <th data-sort="title">Tender</th>
+      <th data-sort="published">Published</th>
+      <th data-sort="closing">Bid closing</th>
+      <th data-sort="closing">Time left</th>
+    </tr></thead>
+    <tbody id="rows"></tbody>
+  </table></div>
+  <div class="pager">
+    <button class="btn" id="prev">Previous</button>
+    <span class="note" id="pginfo"></span>
+    <button class="btn" id="next">Next</button>
+  </div>
+</div>
+
+<div class="panel"><h2>Source coverage</h2><div class="body">
+  <div class="cov" id="cov"></div>
+  <p class="note" id="covnote" style="margin:12px 0 0"></p>
+</div></div>
+</template>
+
+<script>
+const MON={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+function parseDT(s){
+  if(!s) return null;
+  const m=/^(\d{2})-([A-Za-z]{3})-(\d{4})(?:\s+(\d{2}):(\d{2})\s*(AM|PM))?/.exec(s.trim());
+  if(!m) return null;
+  let h=m[4]?+m[4]:0;
+  if(m[6]==='PM'&&h<12)h+=12;
+  if(m[6]==='AM'&&h===12)h=0;
+  return new Date(+m[3],MON[m[2]],+m[1],h,m[5]?+m[5]:0);
+}
+const fmtN=n=>n.toLocaleString('en-IN');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+let DATA=[], VIEW=[], META={}, page=1, PER=60, sortKey='closing', sortDir=1;
+const $=id=>document.getElementById(id);
+
+function timeLeft(d,now){
+  if(!d) return {txt:'—',cls:'p-ok',hrs:1e9};
+  const hrs=(d-now)/36e5;
+  if(hrs<0) return {txt:'closed',cls:'p-hot',hrs};
+  if(hrs<24) return {txt:Math.max(1,Math.round(hrs))+' h',cls:'p-hot',hrs};
+  const d2=Math.round(hrs/24);
+  return {txt:d2+' d',cls:hrs<72?'p-warn':'p-ok',hrs};
+}
+
+function applyFilters(){
+  const q=$('q').value.trim().toLowerCase();
+  const st=$('f-state').value, org=$('f-org').value, days=$('f-days').value;
+  const now=new Date();
+  const showClosed=$('f-closed').checked;
+  const reg=$('f-region').value, work=$('f-work').value;
+  VIEW=DATA.filter(t=>{
+    if(work==='ca'      && t.sector!=='ca') return false;
+    if(work==='consult' && t.sector!=='consult') return false;
+    if(work==='both'    && !t.sector) return false;
+    if(work==='other'   && t.sector) return false;
+    if(reg && !t._regions.includes(reg)) return false;
+    if(!showClosed&&t._close&&t._close<now) return false;
+    if(st&&t.state!==st) return false;
+    if(org&&t.organisation!==org) return false;
+    if(days){
+      if(!t._close) return false;
+      const h=(t._close-now)/36e5;
+      if(h<0||h>days*24) return false;
+    }
+    if(q&&!t._hay.includes(q)) return false;
+    return true;
+  });
+  VIEW.sort((a,b)=>{
+    let x,y;
+    if(sortKey==='closing'||sortKey==='published'){
+      x=a['_'+(sortKey==='closing'?'close':'pub')]?.getTime()??8e15;
+      y=b['_'+(sortKey==='closing'?'close':'pub')]?.getTime()??8e15;
+    } else { x=(a[sortKey]||'').toLowerCase(); y=(b[sortKey]||'').toLowerCase(); }
+    return x<y?-sortDir:x>y?sortDir:0;
+  });
+  page=1; render();
+}
+
+function render(){
+  const now=new Date();
+  $('k-total').textContent=fmtN(VIEW.length);
+  $('k-states').textContent=new Set(VIEW.map(t=>t.state)).size;
+  $('k-48').textContent=fmtN(VIEW.filter(t=>t._close&&(t._close-now)/36e5>=0&&(t._close-now)/36e5<=48).length);
+  $('k-week').textContent=fmtN(VIEW.filter(t=>t._close&&(t._close-now)/36e5>=0&&(t._close-now)/36e5<=168).length);
+  $('k-new').textContent=fmtN(VIEW.filter(t=>t._pub&&(now-t._pub)/36e5<=24).length);
+  $('k-org').textContent=fmtN(new Set(VIEW.map(t=>t.organisation).filter(Boolean)).size);
+
+  // charts
+  const byState={};VIEW.forEach(t=>byState[t.state]=(byState[t.state]||0)+1);
+  drawBars('chart-state',Object.entries(byState).sort((a,b)=>b[1]-a[1]).slice(0,14),true);
+  const buckets=[['Today',0],['Tomorrow',0],['2–3 days',0],['4–7 days',0],['8–14 days',0],['Later',0]];
+  VIEW.forEach(t=>{ if(!t._close)return; const h=(t._close-now)/36e5;
+    if(h<0)return; const i=h<24?0:h<48?1:h<=72?2:h<=168?3:h<=336?4:5; buckets[i][1]++; });
+  drawBars('chart-time',buckets,false);
+
+  // table
+  const start=(page-1)*PER, slice=VIEW.slice(start,start+PER);
+  $('rows').innerHTML = slice.length ? slice.map(t=>{
+    const tl=timeLeft(t._close,now);
+    const deep=t.detail_url||'';
+    return `<tr>
+      <td><span class="st">${esc(t.state)}</span>${
+        (t.region && t.region!==t.state)
+          ? `<div class="reg" title="Delivery / consignee state">${esc(t.region)}</div>` : ''}</td>
+      <td class="dept" title="${esc((t.org_chain||[]).join(' › '))}">${esc(t.organisation)||'—'}</td>
+      <td class="ttl"><a href="${esc(t.portal)}" target="_blank" rel="noopener"
+            data-deep="${esc(deep)}" data-portal="${esc(t.portal)}"
+            title="Opens the tender on the state portal">${esc(t.title)||'(untitled)'}</a>
+        <div class="meta">${t.ecv?'<b>₹'+Number(t.ecv).toLocaleString('en-IN')+'</b> · ':''}${(t.ref_no&&t.ref_no!==t.tender_id)?'Ref '+esc(t.ref_no):''}${t.tender_id?((t.ref_no&&t.ref_no!==t.tender_id)?' · ':'')+esc(t.tender_id):''}${t.corrigendum?' · <b>corrigendum</b>':''}</div></td>
+      <td class="nowrap">${esc(t.published)}</td>
+      <td class="nowrap">${esc(t.closing)}</td>
+      <td><span class="pill ${tl.cls}">${tl.txt}</span></td></tr>`;
+  }).join('') : `<tr><td colspan="6" style="padding:40px;text-align:center;color:var(--muted)">No tenders match these filters.</td></tr>`;
+
+  const pages=Math.max(1,Math.ceil(VIEW.length/PER));
+  $('pginfo').textContent=`Page ${page} of ${pages} · ${fmtN(VIEW.length)} tenders`;
+  $('prev').disabled=page<=1; $('next').disabled=page>=pages;
+  $('tblhead').textContent=`Tenders — showing ${fmtN(Math.min(PER,VIEW.length-start))} of ${fmtN(VIEW.length)}`;
+}
+
+function drawBars(id,pairs,clickable){
+  const max=Math.max(1,...pairs.map(p=>p[1]));
+  $(id).innerHTML=pairs.map(([k,v])=>`<div class="bar-row">
+    <div class="nm" ${clickable?`data-state="${esc(k)}"`:''} title="${esc(k)}">${esc(k)}</div>
+    <div class="bar-track"><div class="bar-fill" style="width:${(v/max*100).toFixed(1)}%"></div></div>
+    <div class="v">${fmtN(v)}</div></div>`).join('');
+  if(clickable) $(id).querySelectorAll('[data-state]').forEach(el=>
+    el.onclick=()=>{ $('f-state').value=el.dataset.state; syncOrgOptions(); syncHint(); applyFilters(); });
+}
+
+
+// ---------------------------------------------------------- opening a tender
+// GePNIC deep links are session-scoped: the sp=S... token only resolves inside
+// a live session, so a cold click lands on "Your session has timed out". Open
+// the portal first (that issues a JSESSIONID), then send the same tab to the
+// deep link. Middle-click / "open in new tab" still works -- the href is the
+// portal itself, which is always valid.
+const PRIME_MS = 1600;
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[data-deep]');
+  if(!a) return;
+  const deep = a.dataset.deep, portal = a.dataset.portal;
+  if(!deep || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+  e.preventDefault();
+  // Only GePNIC needs the session dance. GeM's /showbidDocument/<id> is a
+  // plain PDF and every other source links straight to a real page, so
+  // priming there would just cost an extra page load.
+  const needsPrime = /\/(?:nicgep|eprocure)\//.test(portal || '');
+  if(!needsPrime){ window.open(deep, '_blank', 'noopener'); return; }
+  const w = window.open(portal, '_blank');
+  if(!w){ window.open(deep, '_blank'); return; }   // popup blocked: best effort
+  setTimeout(() => { try { w.location.href = deep; } catch(_){} }, PRIME_MS);
+});
+
+function toCSV(){
+  const cols=['state','region','tender_id','ref_no','title','organisation','published','closing','opening','corrigendum','ecv','detail_url'];
+  const q=s=>'"'+String(s??'').replace(/"/g,'""')+'"';
+  return [cols.join(','),...VIEW.map(t=>cols.map(c=>q(t[c])).join(','))].join('\r\n');
+}
+
+// ---------------------------------------------------------------- live refresh
+// The scraper republishes tenders.json whenever it runs (nightly by default).
+// Poll the tiny status.json rather than the ~33 MB payload, and only pull the
+// big file when generated_at actually changes.
+let LAST_SEEN='', POLL_MS=30000, TICK_MS=60000;
+
+function agoText(iso){
+  const m=/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/.exec(iso||'');
+  if(!m) return '';
+  const then=new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]);
+  const mins=Math.round((Date.now()-then)/60000);
+  if(mins<1) return 'just now';
+  if(mins<60) return mins+' min ago';
+  const h=Math.floor(mins/60);
+  if(h<24) return h+' h ago';
+  return Math.floor(h/24)+' d ago';
+}
+
+function renderSub(){
+  const d=META||{};
+  const sub=$('sub'); if(!sub) return;
+  sub.innerHTML=`${fmtN(d.count||0)} active tenders closing within ${esc(d.window_days)} days · `+
+    `${(d.sources||[]).filter(s=>s.count>0).length} portals · `+
+    `updated <b>${esc(agoText(d.generated_at))}</b> <span class="note">(${esc(d.generated_at||'')})</span>`+
+    (d.partial?` · <b style="color:var(--warn)">refreshing now — more still loading</b>`
+              :` · <span class="livedot"></span><span class="note">auto-updating</span>`);
+}
+
+function ingest(d){
+  META=d;
+  DATA=d.tenders.map(t=>{
+    t._close=parseDT(t.closing); t._pub=parseDT(t.published);
+    t._hay=[t.title,t.organisation,t.ref_no,t.tender_id,t.state,(t.org_chain||[]).join(' ')].join(' ').toLowerCase();
+    // a GeM bid can serve several states; a state portal serves exactly one
+    t._regions=(t.region||'').split(',').map(x=>x.trim()).filter(Boolean);
+    return t;
+  });
+  LAST_SEEN=d.generated_at||'';
+}
+
+
+// Departments belong to a state, so the department list follows the state
+// selection instead of offering all ~3,200 at once. Keeps the current pick
+// if it still exists under the new state, otherwise clears it.
+// A source portal is not a geography. GeM and the central portals publish no
+// location field, so picking "Assam" shows the Assam portal only -- Assam work
+// tendered through GeM or CPPP sits under those sources. Say so, and offer the
+// keyword sweep that does span every source.
+const CENTRAL=new Set(['GeM','ONGC','Central (CPPP)','Central (etenders)',
+                       'Defence (MoD)','Coal India','NTPC']);
+function syncHint(){
+  const st=$('f-state').value, el=$('xhint');
+  if(!st || CENTRAL.has(st)){ el.hidden=true; return; }
+  const n=DATA.filter(t=>t.state!==st && t._regions.includes(st)).length;
+  el.hidden=false;
+  el.innerHTML=`Showing the <b>${esc(st)}</b> portal only. GeM and the central portals `+
+    `are separate sources. Use <b>Location</b> instead to see every source at once. `+
+    (n ? `<button id="sweep">Show all ${esc(st)} tenders</button>` : '');
+  const sw=document.getElementById('sweep');
+  if(sw) sw.onclick=()=>{ $('f-state').value=''; $('f-region').value=st;
+                          syncOrgOptions(); syncHint(); applyFilters(); };
+}
+
+function buildRegionOptions(){
+  const keep=$('f-region').value;
+  const all=new Set();
+  DATA.forEach(t=>t._regions.forEach(r=>all.add(r)));
+  const list=[...all].sort();
+  $('f-region').innerHTML=`<option value="">Anywhere in India (${fmtN(list.length)} states)</option>`+
+    list.map(r=>`<option>${esc(r)}</option>`).join('');
+  $('f-region').value=list.includes(keep)?keep:'';
+}
+
+function syncOrgOptions(){
+  const st=$('f-state').value, keep=$('f-org').value;
+  const orgs=[...new Set(DATA.filter(t=>!st||t.state===st)
+                             .map(t=>t.organisation).filter(Boolean))].sort();
+  $('f-org').innerHTML=`<option value="">All departments${st?` in ${esc(st)}`:''} (${fmtN(orgs.length)})</option>`+
+    orgs.slice(0,6000).map(o=>`<option>${esc(o)}</option>`).join('');
+  $('f-org').value = orgs.includes(keep) ? keep : '';
+}
+
+function refreshOptions(){
+  // keep the user's current selections across a data refresh
+  const keepState=$('f-state').value, keepOrg=$('f-org').value;
+  const states=[...new Set(DATA.map(t=>t.state))].sort();
+  $('f-state').innerHTML='<option value="">All sources</option>'+
+    states.map(s=>`<option>${esc(s)}</option>`).join('');
+  $('f-state').value=states.includes(keepState)?keepState:'';
+  buildRegionOptions();
+  syncOrgOptions();
+  const orgsNow=[...$('f-org').options].map(o=>o.value);
+  $('f-org').value=orgsNow.includes(keepOrg)?keepOrg:'';
+  $('cov').innerHTML=(META.sources||[]).map(s=>
+    `<div class="${s.count?'':'z'}"><span>${esc(s.state)}</span><b>${fmtN(s.count)}</b></div>`).join('');
+}
+
+async function pollStatus(){
+  try{
+    const r=await fetch('status.json?_='+Date.now(),{cache:'no-store'});
+    if(!r.ok) return;                       // pre-dates status.json, or mid-swap
+    const st=await r.json();
+    renderSub();
+    if(st.generated_at && st.generated_at!==LAST_SEEN){
+      const rr=await fetch('tenders.json?_='+Date.now(),{cache:'no-store'});
+      if(!rr.ok) return;
+      const keepPage=page;
+      ingest(await rr.json());
+      refreshOptions();
+      applyFilters();
+      const pages=Math.max(1,Math.ceil(VIEW.length/PER));
+      page=Math.min(keepPage,pages); render();
+      renderSub();
+    }
+  }catch(_){ /* a refresh may be mid-swap; try again next tick */ }
+}
+
+// Re-render on a timer even without new data, so "time left" stays honest and
+// tenders that just closed drop out of the open-only view.
+function liveTick(){ if(DATA.length){ applyFilters(); renderSub(); } }
+
+fetch('tenders.json',{cache:'no-store'}).then(r=>{
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  return r.json();
+}).then(d=>{
+  ingest(d);
+  $('app').classList.remove('loading');
+  $('app').replaceChildren($('tpl').content.cloneNode(true));
+  renderSub();
+
+  const states=[...new Set(DATA.map(t=>t.state))].sort();
+  $('f-state').innerHTML='<option value="">All sources</option>'+
+    states.map(s=>`<option>${esc(s)}</option>`).join('');
+  buildRegionOptions();
+  syncOrgOptions();
+  syncHint();
+  { const core=DATA.filter(t=>t.sector==='ca').length;
+    const cons=DATA.filter(t=>t.sector==='consult').length;
+    const o=$('f-work').options;
+    o[1].text=`My sector 1 — audit / tax / accounting (${fmtN(core)})`;
+    o[2].text=`My sector 2 — other consultancy / PMC (${fmtN(cons)})`;
+    o[3].text=`My sector — both groups (${fmtN(core+cons)})`;
+    o[4].text=`Everything else (${fmtN(DATA.length-core-cons)})`; }
+
+  $('chips').innerHTML=[['Closing in 48 h','48'],['Published in 24 h','new'],
+    ['Has corrigendum','corr'],['Works','works'],['Supply / goods','goods'],['Services','services']]
+    .map(([l,v])=>`<span class="chip" data-c="${v}">${l}</span>`).join('');
+  $('chips').onclick=e=>{
+    const c=e.target.closest('.chip'); if(!c) return;
+    c.classList.toggle('on');
+    const on=[...$('chips').querySelectorAll('.chip.on')].map(x=>x.dataset.c);
+    const now=new Date();
+    applyFilters();
+    if(on.length){
+      VIEW=VIEW.filter(t=>on.every(k=>
+        k==='48'? t._close&&(t._close-now)/36e5>=0&&(t._close-now)/36e5<=48 :
+        k==='new'? t._pub&&(now-t._pub)/36e5<=24 :
+        k==='corr'? !!t.corrigendum :
+        k==='works'? /\b(work|construction|repair|road|building|civil)/i.test(t.title) :
+        k==='goods'? /\b(supply|procurement|purchase|goods|equipment|material)/i.test(t.title) :
+        /\b(service|hiring|maintenance|consultanc|amc)/i.test(t.title)));
+      page=1; render();
+    }
+  };
+
+  ['q','f-state','f-org','f-days','f-closed','f-region','f-work'].forEach(id=>{
+    const el=$(id); el.addEventListener(id==='q'?'input':'change',()=>{
+      if(id==='f-state'){ syncOrgOptions(); syncHint(); }
+      $('chips').querySelectorAll('.chip.on').forEach(c=>c.classList.remove('on')); applyFilters();});
+  });
+  $('reset').onclick=()=>{['q','f-state','f-org','f-days','f-region','f-work'].forEach(i=>$(i).value='');
+    $('f-closed').checked=false; syncOrgOptions(); syncHint();
+    $('chips').querySelectorAll('.chip.on').forEach(c=>c.classList.remove('on')); applyFilters();};
+  $('prev').onclick=()=>{if(page>1){page--;render();scrollTo({top:document.querySelector('.tablewrap').offsetTop-60,behavior:'smooth'});}};
+  $('next').onclick=()=>{page++;render();scrollTo({top:document.querySelector('.tablewrap').offsetTop-60,behavior:'smooth'});};
+  document.querySelectorAll('th[data-sort]').forEach(th=>th.onclick=()=>{
+    const k=th.dataset.sort;
+    if(sortKey===k) sortDir=-sortDir; else {sortKey=k;sortDir=1;}
+    applyFilters();
+  });
+
+  $('cov').innerHTML=d.sources.map(s=>
+    `<div class="${s.count?'':'z'}"><span>${esc(s.state)}</span><b>${fmtN(s.count)}</b></div>`).join('');
+  const un=Object.entries(d.unsupported||{}).map(([k,v])=>`${esc(k)} (${esc(v[1])})`).join(', ');
+  $('covnote').innerHTML=`Source: each state's official NIC e-procurement portal, "Tenders by Closing Date" listing. `+
+    (un?`Not yet covered — these states run non-GePNIC platforms needing separate adapters: ${un}.`:'');
+
+  applyFilters();
+  setInterval(pollStatus, POLL_MS);
+  setInterval(liveTick, TICK_MS);
+}).catch(e=>{
+  $('app').innerHTML=`<div class="warnbox"><b>Could not load tenders.json</b> (${esc(e.message)}).<br>
+    Open this dashboard through the bundled server — run <code>python serve.py</code> — rather than
+    double-clicking the file, because browsers block local file reads. If the file is missing,
+    run <code>python scraper.py</code> first.</div>`;
+});
+
+$('export').onclick=()=>{
+  if(!VIEW.length) return;
+  const b=new Blob(['﻿'+toCSV()],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(b); a.download='india-tenders-filtered.csv'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+};
+$('theme').onclick=()=>{
+  const cur=document.documentElement.getAttribute('data-theme');
+  const next=cur==='dark'?'light':cur==='light'?'dark':
+    (matchMedia('(prefers-color-scheme:dark)').matches?'light':'dark');
+  document.documentElement.setAttribute('data-theme',next);
+  try{localStorage.setItem('tender-theme',next)}catch(_){}
+};
+try{const t=localStorage.getItem('tender-theme'); if(t) document.documentElement.setAttribute('data-theme',t);}catch(_){}
+</script>
+</body>
+</html>
