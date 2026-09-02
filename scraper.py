@@ -44,6 +44,11 @@ UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 IST = timezone(timedelta(hours=5, minutes=30))
 
+
+def now_ist():
+    """Current time, IST, in the format every timestamp in the dataset uses."""
+    return datetime.now(IST).strftime("%Y-%m-%d %H:%M IST")
+
 PAGE = "FrontEndListTendersbyDate"
 TENDER_ID_RE = re.compile(r"(\d{4}_[A-Za-z0-9]+_\d+_\d+)")
 DATE_RE = re.compile(r"\d{2}-[A-Za-z]{3}-\d{4}")
@@ -423,24 +428,30 @@ def main():
         failed = {x["state"]: x.get("note", "") for x in sources if not x.get("count")}
         for st_ in carried:
             why = failed.get(st_, "")
-            note = f"kept from {baseline_at}"
+            # when the data was really scraped, not when it was last relayed --
+            # a source kept alive across many runs must not look fresh
+            since = prev_sources.get(st_, {}).get("scraped_at") or baseline_at
+            note = f"kept from {since}"
             if why:
                 note += f"; this run: {why[:80]}"
             out.append({"state": st_, "count": len(baseline[st_]), "status": "stale",
-                        "note": note})
+                        "scraped_at": since, "note": note})
         for st_, rows_ in baseline.items():          # not part of this run at all
             if st_ not in expected and st_ not in carried:
                 prev = prev_sources.get(st_, {})
+                since = prev.get("scraped_at") or baseline_at
                 out.append({"state": st_, "count": len(rows_), "status": "stale",
-                            "note": prev.get("note") or f"kept from {baseline_at}"})
+                            "scraped_at": since, "note": f"kept from {since}"})
         # A source that legitimately returned zero has no rows to carry, so it
         # would silently drop off the coverage list after a partial run. Keep
         # its entry: "checked, empty" is information, absence is not.
         seen_ = {x["state"] for x in out} | set(expected)
         for st_, prev in prev_sources.items():
             if st_ not in seen_ and not prev.get("count"):
+                since = prev.get("scraped_at") or baseline_at
                 out.append({"state": st_, "count": 0, "status": prev.get("status", "empty"),
-                            "note": prev.get("note") or f"kept from {baseline_at}"})
+                            "scraped_at": since,
+                            "note": prev.get("note") or f"kept from {since}"})
         return out
 
     def merged_rows():
@@ -471,7 +482,8 @@ def main():
             except Exception as e:                     # noqa: BLE001
                 st, rows, note = state, [], f"ERROR {type(e).__name__}: {e}"
             status = "ok" if rows else "empty"
-            sources.append({"state": st, "count": len(rows), "status": status, "note": note})
+            sources.append({"state": st, "count": len(rows), "status": status,
+                            "scraped_at": now_ist(), "note": note})
             fresh[st] = rows
             log(f"  {'OK ' if rows else '-- '} {st:<22} {note}")
 
@@ -484,7 +496,7 @@ def main():
                 srcs = [x for x in sources
                         if x.get("count") or x["state"] not in dropped] + cs
                 write_outputs(rows_out,
-                              {"generated_at": datetime.now(IST).strftime("%Y-%m-%d %H:%M IST"),
+                              {"generated_at": now_ist(),
                                "window": args.window,
                                "sources": sorted(srcs, key=lambda x: -x["count"]),
                                "unsupported": portals.UNSUPPORTED},
@@ -497,7 +509,7 @@ def main():
     dropped = {x["state"] for x in cs}
     sources = [x for x in sources if x.get("count") or x["state"] not in dropped] + cs
     sources.sort(key=lambda x: -x["count"])
-    meta = {"generated_at": datetime.now(IST).strftime("%Y-%m-%d %H:%M IST"),
+    meta = {"generated_at": now_ist(),
             "window": args.window, "sources": sources,
             "unsupported": portals.UNSUPPORTED}
     write_outputs(all_t, meta, args.outdir)

@@ -78,12 +78,20 @@ for c in sorted(cands, key=lambda c: -c["when"].timestamp()):
         rows.setdefault(t.get("state", ""), []).append(t)
     for st, s in other.items():
         # only adopt a source this candidate genuinely scraped, to replace one
-        # the base is only relaying
-        if st in stale and s.get("status") == "ok" and s.get("count"):
+        # the base is only relaying -- and only if it is actually newer, so a
+        # stale upload can never overwrite a more recent relay
+        # Compare scrape times only when both sides carry one. Falling back to
+        # the file timestamps would reintroduce the very bug this avoids: the
+        # publish is the newer *file* while holding the older *source*.
+        mine, theirs = s.get("scraped_at"), srcs.get(st, {}).get("scraped_at")
+        newer = not (mine and theirs) or stamp(mine) > stamp(theirs)
+        if st in stale and s.get("status") == "ok" and s.get("count") and newer:
             by_state[st] = rows.get(st, [])
             srcs[st] = dict(s)
-            srcs[st]["note"] = (f"{s.get('note', '')} (from {c['label']}, "
-                                f"{c['data'].get('generated_at')})").strip()
+            when = s.get("scraped_at") or c["data"].get("generated_at")
+            srcs[st]["scraped_at"] = when
+            srcs[st]["note"] = (f"{s.get('note', '')} "
+                                f"(from {c['label']}, {when})").strip()
             stale.discard(st)
             adopted.append(f"{st} <- {c['label']}")
 
