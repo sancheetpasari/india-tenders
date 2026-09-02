@@ -414,7 +414,7 @@ function activeChips(){
     .filter(id => $(id).getAttribute('aria-pressed')==='true');
 }
 
-function apply(){
+function apply(resetPage = true){
   const q = $('q').value.trim().toLowerCase();
   const st = $('fstate').value, org = $('forg').value, days = $('fdays').value;
   const reg = $('fregion').value, work = $('fwork').value;
@@ -454,7 +454,11 @@ function apply(){
     }
     return x<y ? -sortDir : x>y ? sortDir : 0;
   });
-  page = 1; draw();
+  // a filter change belongs on page 1; the 60-second live tick must not
+  // yank the reader back there
+  if(resetPage) page = 1;
+  else page = Math.min(page, Math.max(1, Math.ceil(VIEW.length / PER)));
+  draw();
 }
 
 function draw(){
@@ -660,7 +664,12 @@ if(D.capped_from && $('capnote')){
 }
 
 // keep "time left" honest while the page stays open
-setInterval(() => { if(VIEW.length || ALL.length) apply(); }, 60000);
+setInterval(() => {
+  if(!(VIEW.length || ALL.length)) return;
+  const y = window.scrollY;
+  apply(false);
+  window.scrollTo(0, y);
+}, 60000);
 apply();
 })();
 </script>

@@ -55,7 +55,7 @@ jobs:
         run: |
           site="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/tenders.json.gz"
           curl -fsSL --max-time 180 "$site" -o published.json.gz || echo "no publish yet"
-          gh release download local-data --pattern tenders.json.gz \n            --output local.json.gz --clobber || echo "no local upload yet"
+          gh release download local-data --pattern tenders.json.gz --output local.json.gz --clobber || echo "no local upload yet"
           [ -f seed/tenders.json.gz ] && cp seed/tenders.json.gz committed.json.gz || true
           python .github/pick_baseline.py
 

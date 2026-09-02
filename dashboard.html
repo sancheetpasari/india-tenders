@@ -227,7 +227,7 @@ function timeLeft(d,now){
   return {txt:d2+' d',cls:hrs<72?'p-warn':'p-ok',hrs};
 }
 
-function applyFilters(){
+function applyFilters(resetPage=true){
   const q=$('q').value.trim().toLowerCase();
   const st=$('f-state').value, org=$('f-org').value, days=$('f-days').value;
   const now=new Date();
@@ -258,7 +258,11 @@ function applyFilters(){
     } else { x=(a[sortKey]||'').toLowerCase(); y=(b[sortKey]||'').toLowerCase(); }
     return x<y?-sortDir:x>y?sortDir:0;
   });
-  page=1; render();
+  // a filter change belongs on page 1; the 60-second live tick must not
+  // yank the reader back there
+  if(resetPage) page=1;
+  else page=Math.min(page, Math.max(1, Math.ceil(VIEW.length/PER)));
+  render();
 }
 
 function render(){
@@ -462,7 +466,14 @@ async function pollStatus(){
 
 // Re-render on a timer even without new data, so "time left" stays honest and
 // tenders that just closed drop out of the open-only view.
-function liveTick(){ if(DATA.length){ applyFilters(); renderSub(); } }
+function liveTick(){
+  if(!DATA.length) return;
+  // keep the reader where they are: same page, same scroll
+  const y = window.scrollY;
+  applyFilters(false);
+  renderSub();
+  window.scrollTo(0, y);
+}
 
 fetch('tenders.json',{cache:'no-store'}).then(r=>{
   if(!r.ok) throw new Error('HTTP '+r.status);
