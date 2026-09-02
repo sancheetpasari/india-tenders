@@ -50,13 +50,16 @@ jobs:
           import json, sys
           d = json.load(open("tenders.json", encoding="utf-8"))
           n = d["count"]
-          ok = [s for s in d["sources"] if s["status"] == "ok"]
-          print(f"{n:,} tenders from {len(ok)} sources")
-          for s in sorted(d["sources"], key=lambda x: -x["count"])[:10]:
+          # count sources that actually returned data this run, not merely
+          # those marked "ok" -- a carried-over source is not evidence the
+          # scrape worked
+          fresh = [s for s in d["sources"] if s["status"] == "ok" and s["count"]]
+          print(f"{n:,} tenders from {len(fresh)} sources that returned data")
+          for s in sorted(d["sources"], key=lambda x: -x["count"])[:12]:
               print(f"  {s['state']:<22}{s['count']:>7,}  {s['status']}")
-          if n < 20000 or len(ok) < 15:
-              sys.exit(f"::error::only {n:,} tenders from {len(ok)} sources -- "
-                       "portals are probably blocking the runner's IP")
+          if n < 20000 or len(fresh) < 15:
+              sys.exit(f"::error::only {n:,} tenders from {len(fresh)} live sources -- "
+                       "the portals are probably refusing the runner's IP range")
           PY
 
       - name: Build the page
