@@ -6,6 +6,11 @@ on:
     - cron: "30 18 * * *"   # 00:00 IST
     - cron: "30 6 * * *"    # 12:00 IST
   workflow_dispatch:         # and a "Run workflow" button
+    inputs:
+      use_seed:
+        description: "Start from the committed seed instead of the last publish"
+        type: boolean
+        default: false
 
 # never let two scrapes overlap; the later one waits rather than doubling
 # the load on every portal
@@ -37,6 +42,29 @@ jobs:
 
       - name: Install Chromium (needed for Gujarat and Bihar)
         run: python -m playwright install --with-deps chromium
+
+      - name: Reuse the last published data as a baseline
+        # Some portals refuse cloud IP ranges (GeM outright, AP / Chhattisgarh /
+        # Gujarat time out). Without a baseline those sources simply disappear
+        # from the published page. Seeding the run with what is already live
+        # lets scraper.py's merge keep them -- flagged "stale" -- instead.
+        continue-on-error: true
+        run: |
+          show () { python -c 'import json,sys;d=json.load(open("tenders.json",encoding="utf-8"));print(sys.argv[1],format(d["count"],","),"tenders from",d["generated_at"])' "$1"; }
+          url="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/tenders.json.gz"
+
+          if [ "${{ inputs.use_seed }}" = "true" ] && [ -f seed/tenders.json.gz ]; then
+            gunzip -c seed/tenders.json.gz > tenders.json
+            show "seed (forced):"
+          elif curl -fsSL --max-time 180 "$url" -o prev.json.gz; then
+            gunzip -c prev.json.gz > tenders.json
+            show "last publish:"
+          elif [ -f seed/tenders.json.gz ]; then
+            gunzip -c seed/tenders.json.gz > tenders.json
+            show "seed (no publish yet):"
+          else
+            echo "no baseline available - starting clean"
+          fi
 
       - name: Scrape every portal
         run: python scraper.py --window 14 --workers 12 --passes 5 --conc 3 --deadline 900
