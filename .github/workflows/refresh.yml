@@ -47,8 +47,10 @@ jobs:
         # Four sources refuse GitHub's runner IPs (GeM outright; Andhra
         # Pradesh, Chhattisgarh and Gujarat time out). Two places may hold
         # them: the last cloud publish, and an upload from a machine that can
-        # reach them (push_to_cloud.py -> the "local-data" release). Take
-        # whichever is newer, so a laptop run feeds the cloud page.
+        # reach them (push_to_cloud.py -> the "local-data" release). The
+        # picker judges freshness per source, not per file: the publish is
+        # usually the newer file but only ever relays those four, so a source
+        # the laptop actually scraped wins over one the cloud carried forward.
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
