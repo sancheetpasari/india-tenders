@@ -420,10 +420,14 @@ def main():
     def carried_sources(carried):
         """Source rows for states whose data we kept rather than re-scraped."""
         out = []
+        failed = {x["state"]: x.get("note", "") for x in sources if not x.get("count")}
         for st_ in carried:
-            prev = prev_sources.get(st_, {})
+            why = failed.get(st_, "")
+            note = f"kept from {baseline_at}"
+            if why:
+                note += f"; this run: {why[:80]}"
             out.append({"state": st_, "count": len(baseline[st_]), "status": "stale",
-                        "note": prev.get("note") or f"kept from {baseline_at}"})
+                        "note": note})
         for st_, rows_ in baseline.items():          # not part of this run at all
             if st_ not in expected and st_ not in carried:
                 prev = prev_sources.get(st_, {})
@@ -475,7 +479,10 @@ def main():
             done += 1
             if done == len(futs) or time.time() - last_write > 20:
                 rows_out, carried = merged_rows()
-                srcs = list(sources) + carried_sources(carried)
+                cs = carried_sources(carried)
+                dropped = {x["state"] for x in cs}
+                srcs = [x for x in sources
+                        if x.get("count") or x["state"] not in dropped] + cs
                 write_outputs(rows_out,
                               {"generated_at": datetime.now(IST).strftime("%Y-%m-%d %H:%M IST"),
                                "window": args.window,
@@ -486,7 +493,9 @@ def main():
 
     # A state that failed this run keeps its previous data rather than vanishing.
     all_t, carried = merged_rows()
-    sources.extend(carried_sources(carried))
+    cs = carried_sources(carried)
+    dropped = {x["state"] for x in cs}
+    sources = [x for x in sources if x.get("count") or x["state"] not in dropped] + cs
     sources.sort(key=lambda x: -x["count"])
     meta = {"generated_at": datetime.now(IST).strftime("%Y-%m-%d %H:%M IST"),
             "window": args.window, "sources": sources,
