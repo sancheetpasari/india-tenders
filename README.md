@@ -39,6 +39,7 @@ The dashboard opens at <http://127.0.0.1:8777/dashboard.html>.
 | `open-dashboard.bat` | Double-click to open the dashboard |
 | `build_artifact.py` | Rebuilds the shareable single-file page |
 | `share/` | The shareable page and its template |
+| `.github/workflows/refresh.yml` | Scrapes and republishes twice daily in the cloud |
 | `status.json` | Tiny freshness file the dashboard polls |
 | `tenders.json` | Data the dashboard reads |
 | `tenders.csv` | Same data for Excel |
@@ -386,6 +387,54 @@ fits and says so both in its output and on the page itself. At ~6.6 MB for
   its own column formatted in crore/lakh.
 * The page is pure ASCII, so it renders correctly no matter what character set
   the host declares.
+
+## Running it in the cloud instead of on this laptop
+
+Both local schedules need the laptop awake. `.github/workflows/refresh.yml`
+moves the whole job to GitHub's runners, so the site stays current whether the
+laptop is on, off or elsewhere.
+
+It runs at **00:00 and 12:00 IST**, scrapes every source (Playwright included,
+so Gujarat and Bihar still work), builds the self-contained page and publishes
+it to **GitHub Pages**. There is also a "Run workflow" button for an on-demand
+refresh.
+
+### One-time setup
+
+From the project folder:
+
+```bash
+git remote add origin https://github.com/<you>/india-tenders.git
+git branch -M main
+git push -u origin main
+```
+
+Then in the repository on github.com:
+
+1. **Settings -> Pages -> Build and deployment -> Source: GitHub Actions**
+2. **Actions -> Refresh tenders -> Run workflow**, to try it once immediately
+
+The site lands at `https://<you>.github.io/india-tenders/` - open that on your
+phone. Each run also publishes `tenders.csv` and `tenders.json.gz` beside it.
+
+### Make the repository public
+
+Actions minutes are unlimited on public repositories. A private one gets 2,000
+minutes a month, and two ~25-minute runs a day is roughly 1,500 - it fits, but
+with little room. Nothing here is secret: the code is a scraper and the data is
+published government tenders.
+
+### The risk worth knowing about
+
+Indian government portals sometimes refuse cloud IP ranges, and GitHub's
+runners are Azure. If that happens the scrape does not error, it simply returns
+almost nothing - so the workflow has a gate that **fails the run** when the
+harvest looks implausible (under 20,000 tenders, or fewer than 15 sources
+returning data) rather than publishing an empty dashboard over a good one.
+
+If the portals do block the runners, the fallback is to keep scraping locally
+and let the workflow only publish, or to run the scraper on a small always-on
+machine with an Indian IP.
 
 ## Caveats
 
