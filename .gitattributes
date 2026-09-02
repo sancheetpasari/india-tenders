@@ -1,0 +1,5 @@
+# CI runs on Linux. CRLF would break the bash heredocs in the workflow and
+# confuse Python, so normalise everything to LF in the repository.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.vbs text eol=crlf
