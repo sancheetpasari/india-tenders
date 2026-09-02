@@ -11,3 +11,4 @@ share/tender-registry.html
 .scrape.lock
 __pycache__/
 *.pyc
+_upload/

@@ -22,7 +22,8 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, "tenders.json")
-TMP = os.path.join(HERE, "_upload.json.gz")
+UPLOAD_DIR = os.path.join(HERE, "_upload")
+TMP = os.path.join(UPLOAD_DIR, "tenders.json.gz")
 TAG = "local-data"
 TITLE = "Latest local scrape"
 
@@ -66,6 +67,7 @@ def main():
     if not have:
         sys.exit("this dataset has none of the cloud-blocked sources; nothing to add")
 
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
     raw = json.dumps(d, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     with gzip.open(TMP, "wb", compresslevel=9) as f:
         f.write(raw)
@@ -83,8 +85,9 @@ def main():
             "not part of the git history.")
         print(f"created release '{TAG}'")
 
-    run(gh, "release", "upload", TAG, f"{TMP}#tenders.json.gz", "--clobber")
+    run(gh, "release", "upload", TAG, TMP, "--clobber")
     os.remove(TMP)
+    os.rmdir(UPLOAD_DIR)
     print(f"done -- the next cloud refresh will merge this in")
 
 
