@@ -19,9 +19,11 @@ dashboard is always readable, even mid-refresh.
 from __future__ import annotations
 
 import argparse
+import gzip
 import http.server
 import json
 import os
+import shutil
 import socketserver
 import subprocess
 import sys
@@ -150,7 +152,52 @@ def save_marks(marks):
     os.replace(tmp, INTERESTED)
 
 
+CACHE = os.path.join(HERE, ".cache")
+_gz_lock = threading.Lock()
+
+# tenders.json is ~66 MB of verbose JSON and compresses to about an eighth of
+# that. Unzipped it is a punishing download for a phone on Wi-Fi -- it simply
+# fails -- so serve a cached gzip and let the browser inflate it.
+
+
+def gzipped(path):
+    """Cached gzip of `path`, rebuilt whenever the source changes."""
+    os.makedirs(CACHE, exist_ok=True)
+    out = os.path.join(CACHE, os.path.basename(path) + ".gz")
+    with _gz_lock:
+        if (not os.path.exists(out)
+                or os.path.getmtime(out) < os.path.getmtime(path)):
+            tmp = out + ".tmp"
+            with open(path, "rb") as f, gzip.open(tmp, "wb", compresslevel=6) as g:
+                shutil.copyfileobj(f, g, 1 << 20)
+            os.replace(tmp, out)
+    return out
+
+
 class Handler(http.server.SimpleHTTPRequestHandler):
+    GZIP_EXT = {".json", ".csv", ".html", ".js", ".css"}
+    GZIP_MIN = 65536
+
+    def do_GET(self):                                     # noqa: N802
+        local = self.translate_path(self.path)
+        if (os.path.splitext(local)[1].lower() in self.GZIP_EXT
+                and "gzip" in (self.headers.get("Accept-Encoding") or "")
+                and os.path.isfile(local)
+                and os.path.getsize(local) > self.GZIP_MIN):
+            try:
+                gz = gzipped(local)
+            except OSError:
+                return super().do_GET()
+            self.send_response(200)
+            self.send_header("Content-Type", self.guess_type(local))
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Content-Length", str(os.path.getsize(gz)))
+            self.end_headers()
+            with open(gz, "rb") as f:
+                shutil.copyfileobj(f, self.wfile)
+            return
+        return super().do_GET()
+
     def do_POST(self):                                    # noqa: N802
         if self.path.split("?")[0] != "/interested":
             self.send_error(404)

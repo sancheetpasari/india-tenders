@@ -17,3 +17,6 @@ share/tender-registry.html
 __pycache__/
 *.pyc
 _upload/
+
+# gzip cache for the local server
+.cache/
