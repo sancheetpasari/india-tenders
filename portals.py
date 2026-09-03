@@ -8,6 +8,7 @@ need their own adapters -- they are listed in UNSUPPORTED for visibility.
 
 # state -> (host, context_path)
 GEPNIC_PORTALS = {
+    "Andaman & Nicobar":   ("eprocure.andamannicobar.gov.in", "nicgep"),
     "Arunachal Pradesh":   ("arunachaltenders.gov.in",     "nicgep"),
     "Assam":               ("assamtenders.gov.in",         "nicgep"),
     "Chandigarh":          ("etenders.chd.nic.in",         "nicgep"),
@@ -19,7 +20,8 @@ GEPNIC_PORTALS = {
     "Jammu & Kashmir":     ("jktenders.gov.in",            "nicgep"),
     "Jharkhand":           ("jharkhandtenders.gov.in",     "nicgep"),
     "Kerala":              ("etenders.kerala.gov.in",      "nicgep"),
-    "Ladakh":              ("jktenders.gov.in",            "nicgep"),
+    "Ladakh":              ("tenders.ladakh.gov.in",       "nicgep"),
+    "Lakshadweep":         ("tendersutl.gov.in",           "nicgep"),
     "Madhya Pradesh":      ("mptenders.gov.in",            "nicgep"),
     "Maharashtra":         ("mahatenders.gov.in",          "nicgep"),
     "Manipur":             ("manipurtenders.gov.in",       "nicgep"),
@@ -46,7 +48,9 @@ GEPNIC_PORTALS = {
 }
 
 # Ladakh shares the J&K GePNIC instance; skip the duplicate fetch by default.
-DUPLICATE_OF = {"Ladakh": "Jammu & Kashmir"}
+# Ladakh shared the J&K portal after the 2019 reorganisation. It runs its
+# own GePNIC instance now, so it is a source in its own right.
+DUPLICATE_OF = {}
 
 # Central marketplaces / platforms that are NOT covered. Each is a distinct
 # system, not GePNIC, and would need its own adapter:

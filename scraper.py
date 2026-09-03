@@ -268,8 +268,20 @@ COLS = ["state", "region", "sector", "tender_id", "ref_no", "title", "organisati
 
 
 def _replace(tmp, final):
-    """Swap a finished temp file into place so readers never see a half-written one."""
-    os.replace(tmp, final)
+    """Swap a finished temp file into place so readers never see a half-written one.
+
+    Windows refuses the rename while any other process holds the destination
+    open -- the dashboard server reading tenders.json is enough. Retry briefly
+    rather than lose a whole scrape to a reader that will be gone in a moment.
+    """
+    for attempt in range(12):
+        try:
+            os.replace(tmp, final)
+            return
+        except PermissionError:
+            if attempt == 11:
+                raise
+            time.sleep(0.25)
 
 
 def write_outputs(tenders, meta, outdir=".", partial=False):

@@ -167,9 +167,14 @@ def gzipped(path):
     with _gz_lock:
         if (not os.path.exists(out)
                 or os.path.getmtime(out) < os.path.getmtime(path)):
+            # Read it fully and let go before compressing. Holding the file
+            # open for the seconds that gzip takes blocks the scraper's atomic
+            # rename on Windows, which costs it the whole run.
+            with open(path, "rb") as f:
+                raw = f.read()
             tmp = out + ".tmp"
-            with open(path, "rb") as f, gzip.open(tmp, "wb", compresslevel=6) as g:
-                shutil.copyfileobj(f, g, 1 << 20)
+            with gzip.open(tmp, "wb", compresslevel=6) as g:
+                g.write(raw)
             os.replace(tmp, out)
     return out
 
