@@ -412,6 +412,24 @@ function deepURL(t){
   const base = PORTAL[t.sti];
   return base ? base + GEPNIC_Q + encodeURIComponent(t.link) : '';
 }
+// Wait for the portal to actually answer before following the deep link.
+// A fixed delay is a guess: on a phone over 4G it expires before the session
+// cookie exists, and the tender opens as "your session has timed out". The
+// moment the opened window goes cross-origin, the server has responded.
+function primeThenOpen(portal, url){
+  const w = window.open(portal, '_blank');
+  if(!w){ window.open(url, '_blank'); return; }   // popup blocked: best effort
+  const t0 = Date.now();
+  const tick = setInterval(() => {
+    let answered = false, href = '';
+    try { href = w.location.href; } catch(e){ answered = true; }
+    if(!answered) answered = !!href && href !== 'about:blank';
+    if(!answered && Date.now() - t0 <= 12000) return;
+    clearInterval(tick);
+    if(w.closed) return;
+    setTimeout(() => { try { w.location.href = url; } catch(e){} }, 700);
+  }, 120);
+}
 function needsPrime(portal){
   return (portal||'').indexOf('/nicgep/') >= 0 || (portal||'').indexOf('/eprocure/') >= 0;
 }
@@ -597,9 +615,7 @@ document.getElementById('rows').addEventListener('click', ev => {
   const portal = a.dataset.portal;
   if(!needsPrime(portal)) return;
   ev.preventDefault();
-  const w = window.open(portal, '_blank');
-  if(!w){ window.open(a.href, '_blank'); return; }   // popup blocked: best effort
-  setTimeout(() => { try { w.location.href = a.href; } catch(_){} }, 1600);
+  primeThenOpen(portal, a.href);
 });
 
 $('fstate').innerHTML = '<option value="">All sources</option>' +
