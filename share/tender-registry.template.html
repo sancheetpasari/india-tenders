@@ -583,7 +583,7 @@ function draw(){
 
 // ---- build controls
 $('eyebrow').textContent =
-  `Public procurement · ${D.states.length} state, central & marketplace sources`;
+  `Public procurement · ${D.sources_total || D.states.length} state, central & marketplace sources`;
 // The stamp is IST. Read it as an instant rather than as browser-local time,
 // or the age is wrong by the viewer's offset -- this page gets opened abroad.
 function istAgo(str){

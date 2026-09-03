@@ -433,7 +433,7 @@ function renderSub(){
   const d=META||{};
   const sub=$('sub'); if(!sub) return;
   sub.innerHTML=`${fmtN(d.count||0)} active tenders closing within ${esc(d.window_days)} days · `+
-    `${(d.sources||[]).filter(s=>s.count>0).length} portals · `+
+    `${(d.sources||[]).length} portals · `+
     `updated <b>${esc(agoText(d.generated_at))}</b> <span class="note">(${esc(d.generated_at||'')})</span>`+
     (d.partial?` · <b style="color:var(--warn)">refreshing now — more still loading</b>`
               :` · <span class="livedot"></span><span class="note">auto-updating</span>`);

@@ -144,7 +144,8 @@ def build_payload(data, rows_override=None):
                        if s["state"] not in central})
     return {"generated_at": data["generated_at"], "window": data["window_days"],
             "states": states, "portals": portals, "orgs": orgs, "rows": rows,
-            "marked": marked, "geo_covered": geo_covered}
+            "marked": marked, "geo_covered": geo_covered,
+            "sources_total": len(data.get("sources", []))}
 
 
 def render(tpl, payload):
