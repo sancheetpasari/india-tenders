@@ -7,7 +7,8 @@ we upload the dataset and the next cloud run merges it in.
 The upload goes to a GitHub *release asset*, replaced in place, not a commit:
 8 MB twice a day would add half a gigabyte of git history a month.
 
-    python push_to_cloud.py
+    python push_to_cloud.py                # dataset + the bid list
+    python push_to_cloud.py --marks-only   # just the bid list, in a second
 
 Needs the GitHub CLI, already authenticated (`gh auth status`).
 """
@@ -86,6 +87,14 @@ def main():
     gh = gh_path()
     if run(gh, "auth", "status", check=False).returncode != 0:
         sys.exit("Not logged in. Run:  gh auth login")
+
+    # Marks change between scrapes. Syncing them alone takes a second, where a
+    # full run re-uploads 8 MB, so a tender ticked this afternoon can reach
+    # tomorrow's reminder without waiting for midnight.
+    if "--marks-only" in sys.argv:
+        push_marks(gh)
+        return
+
     if not os.path.exists(SRC):
         sys.exit("tenders.json not found -- run scraper.py first.")
 
