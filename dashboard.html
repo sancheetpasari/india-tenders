@@ -356,7 +356,9 @@ let LAST_SEEN='', POLL_MS=30000, TICK_MS=60000;
 function agoText(iso){
   const m=/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/.exec(iso||'');
   if(!m) return '';
-  const then=new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]);
+  // the stamp is IST; treat it as an instant, or the age is off by the
+  // viewer's offset when the laptop is opened in another timezone
+  const then=Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5])-5.5*3600*1000;
   const mins=Math.round((Date.now()-then)/60000);
   if(mins<1) return 'just now';
   if(mins<60) return mins+' min ago';
