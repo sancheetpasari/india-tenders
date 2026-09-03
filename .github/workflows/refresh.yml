@@ -11,6 +11,10 @@ on:
         description: "Start from the committed seed instead of the last publish"
         type: boolean
         default: false
+      skip_scrape:
+        description: "Republish the page from the last data, without scraping"
+        type: boolean
+        default: false
 
 # never let two scrapes overlap; the later one waits rather than doubling
 # the load on every portal
@@ -62,15 +66,21 @@ jobs:
           python .github/pick_baseline.py
 
       - name: Scrape every portal
+        # skip_scrape republishes the existing data, for a change to the page
+        # itself. Sweeping 42 government portals again to correct a label is
+        # not a courteous use of their bandwidth.
+        if: ${{ !inputs.skip_scrape }}
         run: python scraper.py --window 14 --workers 12 --passes 5 --conc 3 --deadline 900
 
       - name: Sanity-check the harvest
+        env:
+          SKIPPED: ${{ inputs.skip_scrape }}
         # Indian government portals sometimes refuse cloud IP ranges. If that
         # happens the scrape "succeeds" with almost nothing, so fail loudly
         # rather than publishing an empty dashboard over a good one.
         run: |
           python - <<'PY'
-          import json, sys
+          import json, os, sys
           d = json.load(open("tenders.json", encoding="utf-8"))
           n = d["count"]
           # count sources that actually returned data this run, not merely
@@ -80,6 +90,13 @@ jobs:
           print(f"{n:,} tenders from {len(fresh)} sources that returned data")
           for s in sorted(d["sources"], key=lambda x: -x["count"])[:12]:
               print(f"  {s['state']:<22}{s['count']:>7,}  {s['status']}")
+          if os.environ.get("SKIPPED") == "true":
+              # nothing was scraped, so "fresh sources" proves nothing here;
+              # all that matters is that the baseline is real
+              if n < 20000:
+                  sys.exit(f"::error::baseline holds only {n:,} tenders")
+              print("scrape skipped -- republishing the data above")
+              raise SystemExit(0)
           if n < 20000 or len(fresh) < 15:
               sys.exit(f"::error::only {n:,} tenders from {len(fresh)} live sources -- "
                        "the portals are probably refusing the runner's IP range")
