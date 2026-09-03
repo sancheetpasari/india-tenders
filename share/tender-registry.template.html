@@ -418,7 +418,12 @@ function deepURL(t){
 // moment the opened window goes cross-origin, the server has responded.
 function primeThenOpen(portal, url){
   const w = window.open(portal, '_blank');
-  if(!w){ window.open(url, '_blank'); return; }   // popup blocked: best effort
+  if(!w){                                     // popup blocked
+    alert('Your browser blocked the pop-up this needs to open the tender.'
+        + ' Allow pop-ups for this page, or copy the tender ID and search'
+        + ' for it on the portal.');
+    return;
+  }
   const t0 = Date.now();
   const tick = setInterval(() => {
     let answered = false, href = '';
@@ -433,7 +438,10 @@ function primeThenOpen(portal, url){
     // second request to the same server just trades it for an error page --
     // leave the portal loading and let the reader search the tender ID.
     if(timedOut && !answered) return;
-    setTimeout(() => { try { w.location.href = url; } catch(e){} }, 700);
+    // NIC portals often redirect or rewrite once more just after the first
+    // response. Navigating into the middle of that races it and can land
+    // on an error page, so let it settle first.
+    setTimeout(() => { try { w.location.href = url; } catch(e){} }, 1800);
   }, 120);
 }
 function needsPrime(portal){
