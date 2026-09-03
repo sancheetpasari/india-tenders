@@ -108,6 +108,19 @@ jobs:
       - name: Assemble the site
         run: |
           mkdir -p _site
+          # tenders.csv comes from the scraper, so a skip_scrape run has none.
+          # Rebuild it from the data rather than lose the download.
+          python - <<'PY'
+          import csv, json, os
+          if not os.path.exists("tenders.csv"):
+              import scraper
+              d = json.load(open("tenders.json", encoding="utf-8"))
+              with open("tenders.csv", "w", newline="", encoding="utf-8") as f:
+                  w = csv.DictWriter(f, fieldnames=scraper.COLS, extrasaction="ignore")
+                  w.writeheader()
+                  w.writerows(d["tenders"])
+              print(f"rebuilt tenders.csv from {len(d['tenders']):,} rows")
+          PY
           cp share/tender-registry.html _site/index.html
           cp tenders.csv _site/tenders.csv
           gzip -9 -c tenders.json > _site/tenders.json.gz
