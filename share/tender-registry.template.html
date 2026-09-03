@@ -159,6 +159,8 @@ a.st:hover{text-decoration:underline}
 .reg{margin-top:4px;font-size:11px;color:var(--faint);max-width:150px;
   overflow:hidden;text-overflow:ellipsis}
 .ttl{font-weight:500;max-width:620px;line-height:1.45}
+.tlink{color:inherit;text-decoration:none}
+.tlink:hover{color:var(--accent);text-decoration:underline}
 .idlink{color:var(--accent);text-decoration:none}
 .idlink:hover{text-decoration:underline}
 .idline{
@@ -390,12 +392,29 @@ if(MARKED.size) $('cmark').hidden = false;
 const ALL = D.rows.map((r, i) => {
   const o = {mk:MARKED.has(i),
              st:D.states[r[0]], sti:r[0], org:D.orgs[r[1]], id:r[2], title:r[3],
-             published:r[4], closing:r[5], ecv:r[6], region:r[7]||'', sector:r[8]||'', doc:r[9]||''};
+             published:r[4], closing:r[5], ecv:r[6], region:r[7]||'', sector:r[8]||'',
+             doc:r[9]||'', link:r[10]||''};
   o._regions = o.region.split(',').map(x=>x.trim()).filter(Boolean);
   o._c = parseDT(o.closing); o._p = parseDT(o.published);
   o._hay = (o.title+' '+o.org+' '+o.id+' '+o.st).toLowerCase();
   return o;
 });
+
+// GePNIC rows carry only the 25-character sp token; the rest of the URL is
+// identical for every tender on a portal, so rebuild it here rather than
+// shipping it 55,000 times.
+const GEPNIC_Q = '?component=%24DirectLink&page=FrontEndListTendersbyDate' +
+                 '&service=direct&session=T&sp=';
+function deepURL(t){
+  if(t.doc) return 'https://bidplus.gem.gov.in/showbidDocument/' + t.doc;
+  if(!t.link) return '';
+  if(t.link.slice(0,4) === 'http') return t.link;
+  const base = PORTAL[t.sti];
+  return base ? base + GEPNIC_Q + encodeURIComponent(t.link) : '';
+}
+function needsPrime(portal){
+  return (portal||'').indexOf('/nicgep/') >= 0 || (portal||'').indexOf('/eprocure/') >= 0;
+}
 
 let VIEW = [], page = 1, PER = 50, sortK = 'closing', sortDir = 1;
 
@@ -514,7 +533,18 @@ function draw(){
           (t.region && t.region !== t.st)
             ? `<div class="reg" title="Delivery / consignee state">${esc(t.region)}</div>` : ''}</td>`+
       `<td class="dept">${esc(t.org)||'\u2014'}</td>`+
-      `<td class="ttl">${t.mk ? '<span title="You marked this to bid" style="color:#e8b339">&#9733;</span> ' : ''}${esc(t.title)||'(untitled)'}<div class="idline">${t.doc
+      `<td class="ttl">${t.mk ? '<span title="You marked this to bid" style="color:#e8b339">&#9733;</span> ' : ''}${(() => {
+          const u = deepURL(t), name = esc(t.title)||'(untitled)';
+          if(!u) return name;
+          // Gujarat, Andhra Pradesh, Telangana, Bihar, Chhattisgarh and ONGC
+          // publish no per-tender URL, so say where the link really goes
+          const exact = !!t.doc || t.link.slice(0,4) !== 'http';
+          const tip = exact ? 'Open this tender on the portal'
+                            : 'Opens the portal - search this tender ID there';
+          return `<a class="tlink" href="${esc(u)}" target="_blank" rel="noopener"
+                data-portal="${esc(PORTAL[t.sti]||'')}"
+                title="${tip}">${name}</a>`;
+        })()}<div class="idline">${t.doc
           ? `<a class="idlink" href="https://bidplus.gem.gov.in/showbidDocument/${esc(t.doc)}"
                 target="_blank" rel="noopener" title="Open this bid document on GeM">${esc(t.id)}</a>`
           : esc(t.id)}</div></td>`+
@@ -557,6 +587,21 @@ function stampLine(){
     ` · rebuilt 00:00 &amp; 12:00 IST`;
 }
 stampLine();
+
+// A GePNIC deep link answers "your session has timed out" when opened cold.
+// Open the portal first, give it a moment to set a session, then follow the
+// link in that same tab. Everything else opens directly.
+document.getElementById('rows').addEventListener('click', ev => {
+  const a = ev.target.closest('a.tlink');
+  if(!a || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.button !== 0) return;
+  const portal = a.dataset.portal;
+  if(!needsPrime(portal)) return;
+  ev.preventDefault();
+  const w = window.open(portal, '_blank');
+  if(!w){ window.open(a.href, '_blank'); return; }   // popup blocked: best effort
+  setTimeout(() => { try { w.location.href = a.href; } catch(_){} }, 1600);
+});
+
 $('fstate').innerHTML = '<option value="">All sources</option>' +
   D.states.map(s=>`<option>${esc(s)}</option>`).join('');
 // A source portal is not a geography. GeM and the central portals publish no

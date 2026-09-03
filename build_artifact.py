@@ -89,6 +89,27 @@ def marked_keys():
         return set()
 
 
+SP_RE = re.compile(r"[?&]sp=([^&]+)")
+
+
+def _link(t):
+    """What the shared page needs to reach this tender.
+
+    GePNIC deep links are all the same URL with a different 25-character sp
+    token, so store the token and rebuild the rest in the browser: 55,000
+    rows cost ~1.4 MB instead of ~11 MB. Everything else keeps its own URL.
+    GeM is already covered by _doc_id.
+    """
+    u = t.get("detail_url") or ""
+    if not u or "showbidDocument" in u:
+        return ""
+    m = SP_RE.search(u)
+    if m:
+        from urllib.parse import unquote
+        return unquote(m.group(1))
+    return u
+
+
 def build_payload(data, rows_override=None):
     rows_in = rows_override if rows_override is not None else data["tenders"]
     states = sorted({t.get("state", "") for t in rows_in})
@@ -107,7 +128,7 @@ def build_payload(data, rows_override=None):
     rows = [[si[t.get("state", "")], oi.get(t.get("organisation", ""), 0),
              t.get("tender_id", ""), trim(t.get("title", ""), TITLE_MAX),
              t.get("published", ""), t.get("closing", ""), t.get("ecv") or "",
-             t.get("region", ""), t.get("sector", ""), _doc_id(t)]
+             t.get("region", ""), t.get("sector", ""), _doc_id(t), _link(t)]
             for t in rows_in]
     # row indices rather than a flag per row: marks number in the tens, rows
     # in the hundreds of thousands
