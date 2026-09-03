@@ -48,6 +48,40 @@ def run(gh, *args, check=True):
     return p
 
 
+def push_marks(gh):
+    """Send the bid list to the reminder job -- as a repository secret.
+
+    Not as a release asset: this repository is public and so are its assets,
+    and which contracts you intend to bid for is not something to publish.
+    Secrets are encrypted at rest, masked in logs, and readable only by the
+    workflow. GitHub caps one at 48 KB, so keep the payload lean.
+    """
+    path = os.path.join(HERE, "interested.json")
+    if not os.path.exists(path):
+        return
+    with open(path, encoding="utf-8") as f:
+        marks = json.load(f).get("marks", {})
+    if not marks:
+        return
+
+    lean = {k: {f: str(v.get(f) or "")[:200] for f in
+                ("title", "state", "organisation", "closing", "detail_url")}
+            for k, v in marks.items()}
+    body = json.dumps({"marks": lean}, ensure_ascii=False, separators=(",", ":"))
+    if len(body.encode()) > 40000:
+        print(f"   {len(marks)} marks exceed the 48 KB secret limit "
+              f"({len(body.encode()):,} bytes); reminders will use the last "
+              "list that fit. Untick a few you are no longer chasing.")
+        return
+
+    p = subprocess.run([gh, "secret", "set", "INTERESTED_MARKS"],
+                       input=body, capture_output=True, text=True)
+    if p.returncode != 0:
+        print(f"   could not update the bid list: {p.stderr.strip()[:160]}")
+    else:
+        print(f"   marked interested  {len(marks):>5}  (kept private)")
+
+
 def main():
     gh = gh_path()
     if run(gh, "auth", "status", check=False).returncode != 0:
@@ -86,6 +120,8 @@ def main():
         print(f"created release '{TAG}'")
 
     run(gh, "release", "upload", TAG, TMP, "--clobber")
+
+    push_marks(gh)
     os.remove(TMP)
     os.rmdir(UPLOAD_DIR)
     print(f"done -- the next cloud refresh will merge this in")

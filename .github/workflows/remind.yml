@@ -1,0 +1,52 @@
+name: Tender reminders
+
+# 08:00 IST. GitHub cron is UTC, and IST is UTC+5:30.
+on:
+  schedule:
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Load the bid list
+        # It arrives as a secret, not a release asset: this repository is
+        # public and so are its assets, and which contracts are being bid for
+        # is not something to publish. push_to_cloud.py updates it after each
+        # local scrape, so reminders keep arriving while the laptop is off.
+        env:
+          MARKS: ${{ secrets.INTERESTED_MARKS }}
+        run: |
+          if [ -n "$MARKS" ]; then
+            printf '%s' "$MARKS" > interested.json
+            python -c "import json;print('marked:', len(json.load(open('interested.json'))['marks']))"
+          else
+            echo "nothing marked yet"
+          fi
+
+      - name: Fetch the latest data
+        run: |
+          site="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/tenders.json.gz"
+          curl -fsSL --max-time 180 "$site" -o tenders.json.gz || echo "no publish yet"
+
+      - name: Send the digest
+        # Absent credentials are reported, not fatal: the schedule should not
+        # go red every morning just because reminders are not switched on yet.
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+        run: python send_reminders.py --data tenders.json.gz

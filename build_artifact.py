@@ -30,6 +30,9 @@ CAP_BYTES = 15_000_000          # aim under it, so a slow week of growth
 BS = chr(92)
 
 
+from send_reminders import mark_key
+
+
 def trim(s, n):
     s = (s or "").strip()
     return s if len(s) <= n else s[:n - 1] + "..."
@@ -70,6 +73,22 @@ def _doc_id(t):
     return m.group(1) if m else ""
 
 
+def marked_keys():
+    """Keys of the tenders marked "I intend to bid", if any were saved.
+
+    Off unless --with-marks is passed. This page gets published to a public
+    URL, and a star against a tender tells anyone reading it which contracts
+    you intend to bid for.
+    """
+    if "--with-marks" not in sys.argv:
+        return set()
+    try:
+        with open(os.path.join(HERE, "interested.json"), encoding="utf-8") as f:
+            return set(json.load(f).get("marks", {}))
+    except (OSError, ValueError):
+        return set()
+
+
 def build_payload(data, rows_override=None):
     rows_in = rows_override if rows_override is not None else data["tenders"]
     states = sorted({t.get("state", "") for t in rows_in})
@@ -90,8 +109,14 @@ def build_payload(data, rows_override=None):
              t.get("published", ""), t.get("closing", ""), t.get("ecv") or "",
              t.get("region", ""), t.get("sector", ""), _doc_id(t)]
             for t in rows_in]
+    # row indices rather than a flag per row: marks number in the tens, rows
+    # in the hundreds of thousands
+    keys = marked_keys()
+    marked = [i for i, t in enumerate(rows_in)
+              if mark_key(t) in keys] if keys else []
     return {"generated_at": data["generated_at"], "window": data["window_days"],
-            "states": states, "portals": portals, "orgs": orgs, "rows": rows}
+            "states": states, "portals": portals, "orgs": orgs, "rows": rows,
+            "marked": marked}
 
 
 def render(tpl, payload):

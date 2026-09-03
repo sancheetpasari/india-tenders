@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import http.server
+import json
 import os
 import socketserver
 import subprocess
@@ -121,7 +122,71 @@ def scheduler(interval_min, quick_min, initial, deadline, extra, at_times=None):
             _state["last_quick"] = time.time()
 
 
+INTERESTED = os.path.join(HERE, "interested.json")
+_marks_lock = threading.Lock()
+
+# Tenders the user intends to bid for. Kept here rather than in the browser so
+# that every device on the network sees one list, and so the reminder job has
+# something to read. Each entry keeps its own copy of the title and closing
+# date: a tender that drops out of the window must still appear in the mail,
+# and a corrigendum must not silently erase what was marked.
+
+
+def load_marks():
+    try:
+        with open(INTERESTED, encoding="utf-8") as f:
+            d = json.load(f)
+        return d.get("marks", {}) if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_marks(marks):
+    tmp = INTERESTED + ".tmp"
+    payload = {"updated_at": datetime.now().strftime("%Y-%m-%d %H:%M IST"),
+               "count": len(marks), "marks": marks}
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, INTERESTED)
+
+
 class Handler(http.server.SimpleHTTPRequestHandler):
+    def do_POST(self):                                    # noqa: N802
+        if self.path.split("?")[0] != "/interested":
+            self.send_error(404)
+            return
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+            if n <= 0 or n > 20000:
+                raise ValueError("bad length")
+            body = json.loads(self.rfile.read(n).decode("utf-8"))
+            key = str(body.get("key") or "").strip()
+            if not key or len(key) > 300:
+                raise ValueError("bad key")
+        except Exception as e:                            # noqa: BLE001
+            self.send_error(400, f"{type(e).__name__}")
+            return
+
+        with _marks_lock:
+            marks = load_marks()
+            if body.get("on"):
+                meta = body.get("meta") or {}
+                marks[key] = {k: str(meta.get(k) or "")[:300] for k in
+                              ("title", "state", "organisation", "closing",
+                               "detail_url", "portal", "tender_id")}
+                marks[key]["marked_at"] = datetime.now().strftime("%Y-%m-%d %H:%M IST")
+            else:
+                marks.pop(key, None)
+            save_marks(marks)
+            total = len(marks)
+
+        out = json.dumps({"ok": True, "count": total}).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(out)))
+        self.end_headers()
+        self.wfile.write(out)
+
     def end_headers(self):
         self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
         self.send_header("Pragma", "no-cache")
@@ -161,6 +226,9 @@ def main():
         threading.Thread(target=scheduler, daemon=True,
                          args=(args.interval, args.quick, not args.no_initial,
                                args.deadline, extra, at_times)).start()
+
+    if not os.path.exists(INTERESTED):
+        save_marks({})                 # so the page can always fetch it
 
     socketserver.TCPServer.allow_reuse_address = True
     bind = "0.0.0.0" if args.lan else "127.0.0.1"

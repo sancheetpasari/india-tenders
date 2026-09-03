@@ -253,6 +253,7 @@ a.st:hover{text-decoration:underline}
       <div><button class="btn" id="reset">Reset</button></div>
     </div>
     <div class="chips">
+      <button class="chip" id="cmark" aria-pressed="false" hidden>Marked to bid</button>
       <button class="chip" id="c48" aria-pressed="false">Closing in 48 h</button>
       <button class="chip" id="cnew" aria-pressed="false">Published in 24 h</button>
       <button class="chip" id="cval" aria-pressed="false">Has contract value</button>
@@ -382,8 +383,13 @@ function parseDT(s){
 
 // [stateIdx, orgIdx, id, title, published, closing, ecv]
 const PORTAL = D.portals || [];
-const ALL = D.rows.map(r => {
-  const o = {st:D.states[r[0]], sti:r[0], org:D.orgs[r[1]], id:r[2], title:r[3],
+// Tenders marked "I intend to bid" on the laptop. Read-only here: this page
+// is a static file and has nowhere to write a change back to.
+const MARKED = new Set(D.marked || []);
+if(MARKED.size) $('cmark').hidden = false;
+const ALL = D.rows.map((r, i) => {
+  const o = {mk:MARKED.has(i),
+             st:D.states[r[0]], sti:r[0], org:D.orgs[r[1]], id:r[2], title:r[3],
              published:r[4], closing:r[5], ecv:r[6], region:r[7]||'', sector:r[8]||'', doc:r[9]||''};
   o._regions = o.region.split(',').map(x=>x.trim()).filter(Boolean);
   o._c = parseDT(o.closing); o._p = parseDT(o.published);
@@ -410,7 +416,7 @@ function left(d, now){
 }
 
 function activeChips(){
-  return ['c48','cnew','cval','cwork','cgoods','csvc']
+  return ['cmark','c48','cnew','cval','cwork','cgoods','csvc']
     .filter(id => $(id).getAttribute('aria-pressed')==='true');
 }
 
@@ -432,6 +438,7 @@ function apply(resetPage = true){
       const h = (t._c-now)/36e5; if(h < 0 || h > days*24) return false; }
     if(q && !t._hay.includes(q)) return false;
     for(const c of on){
+      if(c==='cmark' && !t.mk) return false;
       if(c==='c48'  && !(t._c && (t._c-now)/36e5 <= 48)) return false;
       if(c==='cnew' && !(t._p && (now-t._p)/36e5 <= 24)) return false;
       if(c==='cval' && !(parseFloat(t.ecv) > 0)) return false;
@@ -507,7 +514,7 @@ function draw(){
           (t.region && t.region !== t.st)
             ? `<div class="reg" title="Delivery / consignee state">${esc(t.region)}</div>` : ''}</td>`+
       `<td class="dept">${esc(t.org)||'\u2014'}</td>`+
-      `<td class="ttl">${esc(t.title)||'(untitled)'}<div class="idline">${t.doc
+      `<td class="ttl">${t.mk ? '<span title="You marked this to bid" style="color:#e8b339">&#9733;</span> ' : ''}${esc(t.title)||'(untitled)'}<div class="idline">${t.doc
           ? `<a class="idlink" href="https://bidplus.gem.gov.in/showbidDocument/${esc(t.doc)}"
                 target="_blank" rel="noopener" title="Open this bid document on GeM">${esc(t.id)}</a>`
           : esc(t.id)}</div></td>`+
@@ -613,7 +620,7 @@ $('cov').innerHTML = Object.entries(counts).sort((a,b)=>b[1]-a[1])
     if(id==='fstate'){ syncOrgOptions(); syncHint(); }
     apply();
   }));
-['c48','cnew','cval','cwork','cgoods','csvc'].forEach(id => $(id).addEventListener('click', () => {
+['cmark','c48','cnew','cval','cwork','cgoods','csvc'].forEach(id => $(id).addEventListener('click', () => {
   const b = $(id); b.setAttribute('aria-pressed', b.getAttribute('aria-pressed')==='true' ? 'false':'true');
   apply();
 }));

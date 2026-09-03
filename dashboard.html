@@ -163,6 +163,8 @@ tr:hover td{background:var(--bg)}
     <div><button class="btn" id="reset">Reset</button></div>
   </div>
   <div class="chips" id="chips"></div>
+  <label class="ck"><input type="checkbox" id="f-mine">
+    Show only the tenders I marked <b id="mkcount"></b></label>
   <label class="ck"><input type="checkbox" id="f-closed">
     Include tenders whose bid deadline has already passed</label>
   <div class="hint" id="xhint" hidden></div>
@@ -179,6 +181,7 @@ tr:hover td{background:var(--bg)}
   <h2 id="tblhead">Tenders</h2>
   <div class="tablewrap"><table>
     <thead><tr>
+      <th title="Tick the ones you intend to bid for">Bid</th>
       <th data-sort="state">State</th>
       <th data-sort="organisation">Department</th>
       <th data-sort="title">Tender</th>
@@ -215,7 +218,7 @@ function parseDT(s){
 const fmtN=n=>n.toLocaleString('en-IN');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-let DATA=[], VIEW=[], META={}, page=1, PER=60, sortKey='closing', sortDir=1;
+let DATA=[], VIEW=[], MARKS={}, META={}, page=1, PER=60, sortKey='closing', sortDir=1;
 const $=id=>document.getElementById(id);
 
 function timeLeft(d,now){
@@ -227,13 +230,53 @@ function timeLeft(d,now){
   return {txt:d2+' d',cls:hrs<72?'p-warn':'p-ok',hrs};
 }
 
+// Tenders marked "I intend to bid". The list lives on the server, not in this
+// browser, so the phone and the laptop agree and the reminder job can read it.
+function markKey(t){
+  return (t.state||'')+'|'+(t.tender_id||t.ref_no||t.detail_url||t.title||'');
+}
+function updateMarkCount(){
+  const n=Object.keys(MARKS).length;
+  $('mkcount').textContent = n ? '('+fmtN(n)+')' : '';
+}
+async function refreshMarks(){
+  try{
+    const r=await fetch('interested.json?_='+Date.now(),{cache:'no-store'});
+    if(r.ok){ const d=await r.json(); MARKS=(d&&d.marks)||{}; }
+  }catch(e){ /* served read-only: marking is simply unavailable */ }
+  updateMarkCount();
+}
+async function setMark(t,on,box){
+  const key=markKey(t);
+  const prev=MARKS[key];
+  if(on) MARKS[key]={title:t.title,state:t.state}; else delete MARKS[key];
+  updateMarkCount();
+  try{
+    const r=await fetch('interested',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({key,on,meta:{title:t.title,state:t.state,
+        organisation:t.organisation,closing:t.closing,detail_url:t.detail_url,
+        portal:t.portal,tender_id:t.tender_id}})});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+  }catch(e){
+    // put it back rather than show a tick that was never saved
+    if(prev) MARKS[key]=prev; else delete MARKS[key];
+    if(box) box.checked=!!prev;
+    updateMarkCount();
+    alert('Could not save that mark: '+e.message+
+          ' - marking needs the dashboard served by live.py.');
+  }
+}
+
 function applyFilters(resetPage=true){
   const q=$('q').value.trim().toLowerCase();
   const st=$('f-state').value, org=$('f-org').value, days=$('f-days').value;
   const now=new Date();
   const showClosed=$('f-closed').checked;
   const reg=$('f-region').value, work=$('f-work').value;
+  const mine=$('f-mine').checked;
   VIEW=DATA.filter(t=>{
+    if(mine && !MARKS[markKey(t)]) return false;
     if(work==='ca'      && t.sector!=='ca') return false;
     if(work==='consult' && t.sector!=='consult') return false;
     if(work==='both'    && !t.sector) return false;
@@ -287,7 +330,10 @@ function render(){
   $('rows').innerHTML = slice.length ? slice.map(t=>{
     const tl=timeLeft(t._close,now);
     const deep=t.detail_url||'';
+    const mk=markKey(t);
     return `<tr>
+      <td><input type="checkbox" class="mk" data-key="${esc(mk)}"${MARKS[mk]?' checked':''}
+            title="I intend to bid for this"></td>
       <td><span class="st">${esc(t.state)}</span>${
         (t.region && t.region!==t.state)
           ? `<div class="reg" title="Delivery / consignee state">${esc(t.region)}</div>` : ''}</td>
@@ -299,7 +345,7 @@ function render(){
       <td class="nowrap">${esc(t.published)}</td>
       <td class="nowrap">${esc(t.closing)}</td>
       <td><span class="pill ${tl.cls}">${tl.txt}</span></td></tr>`;
-  }).join('') : `<tr><td colspan="6" style="padding:40px;text-align:center;color:var(--muted)">No tenders match these filters.</td></tr>`;
+  }).join('') : `<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted)">No tenders match these filters.</td></tr>`;
 
   const pages=Math.max(1,Math.ceil(VIEW.length/PER));
   $('pginfo').textContent=`Page ${page} of ${pages} · ${fmtN(VIEW.length)} tenders`;
@@ -521,13 +567,13 @@ fetch('tenders.json',{cache:'no-store'}).then(r=>{
     }
   };
 
-  ['q','f-state','f-org','f-days','f-closed','f-region','f-work'].forEach(id=>{
+  ['q','f-state','f-org','f-days','f-closed','f-region','f-work','f-mine'].forEach(id=>{
     const el=$(id); el.addEventListener(id==='q'?'input':'change',()=>{
       if(id==='f-state'){ syncOrgOptions(); syncHint(); }
       $('chips').querySelectorAll('.chip.on').forEach(c=>c.classList.remove('on')); applyFilters();});
   });
   $('reset').onclick=()=>{['q','f-state','f-org','f-days','f-region','f-work'].forEach(i=>$(i).value='');
-    $('f-closed').checked=false; syncOrgOptions(); syncHint();
+    $('f-closed').checked=false; $('f-mine').checked=false; syncOrgOptions(); syncHint();
     $('chips').querySelectorAll('.chip.on').forEach(c=>c.classList.remove('on')); applyFilters();};
   $('prev').onclick=()=>{if(page>1){page--;render();scrollTo({top:document.querySelector('.tablewrap').offsetTop-60,behavior:'smooth'});}};
   $('next').onclick=()=>{page++;render();scrollTo({top:document.querySelector('.tablewrap').offsetTop-60,behavior:'smooth'});};
@@ -546,6 +592,14 @@ fetch('tenders.json',{cache:'no-store'}).then(r=>{
   applyFilters();
   setInterval(pollStatus, POLL_MS);
   setInterval(liveTick, TICK_MS);
+
+  // one delegated listener, so it survives every re-render
+  $('rows').addEventListener('change', ev=>{
+    const box=ev.target.closest('.mk'); if(!box) return;
+    const t=DATA.find(x=>markKey(x)===box.dataset.key);
+    if(t) setMark(t, box.checked, box);
+  });
+  refreshMarks().then(()=>applyFilters(false));
 }).catch(e=>{
   $('app').innerHTML=`<div class="warnbox"><b>Could not load tenders.json</b> (${esc(e.message)}).<br>
     Open this dashboard through the bundled server — run <code>python serve.py</code> — rather than

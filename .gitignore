@@ -4,6 +4,11 @@ tenders.json
 tenders.csv
 tenders.db
 status.json
+
+# Which tenders you intend to bid for. Never commit this: the repo is
+# public, and a bid list is competitive information.
+interested.json
+interested.json.tmp
 share/tender-registry.html
 
 # Logs and runtime files
