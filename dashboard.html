@@ -311,7 +311,7 @@ function applyFilters(resetPage=true){
 function render(){
   const now=new Date();
   $('k-total').textContent=fmtN(VIEW.length);
-  $('k-states').textContent=new Set(VIEW.map(t=>t.state)).size;
+  $('k-states').textContent=new Set((META.sources||[]).map(s=>s.state).filter(x=>!CENTRAL.has(x))).size + ' of ' + GEO_TOTAL;
   $('k-48').textContent=fmtN(VIEW.filter(t=>t._close&&(t._close-now)/36e5>=0&&(t._close-now)/36e5<=48).length);
   $('k-week').textContent=fmtN(VIEW.filter(t=>t._close&&(t._close-now)/36e5>=0&&(t._close-now)/36e5<=168).length);
   $('k-new').textContent=fmtN(VIEW.filter(t=>t._pub&&(now-t._pub)/36e5<=24).length);
@@ -459,6 +459,9 @@ function ingest(d){
 // location field, so picking "Assam" shows the Assam portal only -- Assam work
 // tendered through GeM or CPPP sits under those sources. Say so, and offer the
 // keyword sweep that does span every source.
+// 28 states + 8 union territories. The tile used to count distinct
+// sources, so GeM and the central portals inflated it past 36.
+const GEO_TOTAL = 36;
 const CENTRAL=new Set(['GeM','ONGC','Central (CPPP)','Central (etenders)',
                        'Defence (MoD)','Coal India','NTPC']);
 function syncHint(){

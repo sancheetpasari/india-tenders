@@ -135,9 +135,16 @@ def build_payload(data, rows_override=None):
     keys = marked_keys()
     marked = [i for i, t in enumerate(rows_in)
               if mark_key(t) in keys] if keys else []
+    # Coverage, not a count of what is on screen: a state we scrape but which
+    # has no open tender today is still covered. Taken from the source list,
+    # which keeps zero-count entries for exactly this reason.
+    central = {"GeM", "ONGC", "Central (CPPP)", "Central (etenders)",
+               "Defence (MoD)", "Coal India", "NTPC"}
+    geo_covered = len({s["state"] for s in data.get("sources", [])
+                       if s["state"] not in central})
     return {"generated_at": data["generated_at"], "window": data["window_days"],
             "states": states, "portals": portals, "orgs": orgs, "rows": rows,
-            "marked": marked}
+            "marked": marked, "geo_covered": geo_covered}
 
 
 def render(tpl, payload):
