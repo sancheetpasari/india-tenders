@@ -424,9 +424,15 @@ function primeThenOpen(portal, url){
     let answered = false, href = '';
     try { href = w.location.href; } catch(e){ answered = true; }
     if(!answered) answered = !!href && href !== 'about:blank';
-    if(!answered && Date.now() - t0 <= 12000) return;
+    const timedOut = Date.now() - t0 > 12000;
+    if(!answered && !timedOut) return;
     clearInterval(tick);
     if(w.closed) return;
+    // Twelve seconds and the portal still has not replied: it is struggling,
+    // and the deep link sits on the same host. Replacing a slow load with a
+    // second request to the same server just trades it for an error page --
+    // leave the portal loading and let the reader search the tender ID.
+    if(timedOut && !answered) return;
     setTimeout(() => { try { w.location.href = url; } catch(e){} }, 700);
   }, 120);
 }
