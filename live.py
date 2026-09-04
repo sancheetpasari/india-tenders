@@ -134,6 +134,19 @@ _marks_lock = threading.Lock()
 # and a corrigendum must not silently erase what was marked.
 
 
+def stamp():
+    return datetime.now().strftime("%Y-%m-%d %H:%M IST")
+
+
+def new_mark(meta):
+    m = {k: str(meta.get(k) or "")[:300] for k in
+         ("title", "state", "organisation", "closing",
+          "detail_url", "portal", "tender_id")}
+    m["marked_at"] = stamp()
+    m["applied"] = False
+    return m
+
+
 def load_marks():
     try:
         with open(INTERESTED, encoding="utf-8") as f:
@@ -221,18 +234,24 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
         with _marks_lock:
             marks = load_marks()
-            if body.get("on"):
-                meta = body.get("meta") or {}
-                marks[key] = {k: str(meta.get(k) or "")[:300] for k in
-                              ("title", "state", "organisation", "closing",
-                               "detail_url", "portal", "tender_id")}
-                marks[key]["marked_at"] = datetime.now().strftime("%Y-%m-%d %H:%M IST")
+            field = str(body.get("field") or "interested")
+            on = bool(body.get("on"))
+            if field == "applied":
+                # Applying implies interest -- you cannot have bid for
+                # something you never marked -- so tick both if need be.
+                m = marks.get(key) or new_mark(body.get("meta") or {})
+                marks[key] = m
+                m["applied"] = on
+                m["applied_at"] = stamp() if on else ""
+            elif on:
+                marks[key] = new_mark(body.get("meta") or {})
             else:
-                marks.pop(key, None)
+                marks.pop(key, None)          # unmarking drops "applied" too
             save_marks(marks)
             total = len(marks)
+            applied = sum(1 for m in marks.values() if m.get("applied"))
 
-        out = json.dumps({"ok": True, "count": total}).encode()
+        out = json.dumps({"ok": True, "count": total, "applied": applied}).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(out)))

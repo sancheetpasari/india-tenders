@@ -65,9 +65,15 @@ def push_marks(gh):
     if not marks:
         return
 
-    lean = {k: {f: str(v.get(f) or "")[:200] for f in
-                ("title", "state", "organisation", "closing", "detail_url")}
-            for k, v in marks.items()}
+    def trim(v):
+        d = {f: str(v.get(f) or "")[:200] for f in
+             ("title", "state", "organisation", "closing", "detail_url")}
+        # a bool, not str(): "False" is a truthy string and would silence
+        # every reminder
+        d["applied"] = bool(v.get("applied"))
+        return d
+
+    lean = {k: trim(v) for k, v in marks.items()}
     body = json.dumps({"marks": lean}, ensure_ascii=False, separators=(",", ":"))
     if len(body.encode()) > 40000:
         print(f"   {len(marks)} marks exceed the 48 KB secret limit "

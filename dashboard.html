@@ -182,6 +182,7 @@ tr:hover td{background:var(--bg)}
   <div class="tablewrap"><table>
     <thead><tr>
       <th title="Tick the ones you intend to bid for">Bid</th>
+      <th title="Tick once the bid is submitted. It stays on the list but stops appearing in the reminder email.">Applied</th>
       <th data-sort="state">State</th>
       <th data-sort="organisation">Department</th>
       <th data-sort="title">Tender</th>
@@ -236,8 +237,10 @@ function markKey(t){
   return (t.state||'')+'|'+(t.tender_id||t.ref_no||t.detail_url||t.title||'');
 }
 function updateMarkCount(){
-  const n=Object.keys(MARKS).length;
-  $('mkcount').textContent = n ? '('+fmtN(n)+')' : '';
+  const all=Object.values(MARKS), n=all.length;
+  const done=all.filter(m=>m&&m.applied).length;
+  $('mkcount').textContent = !n ? ''
+    : done ? '('+fmtN(n)+', '+fmtN(done)+' applied)' : '('+fmtN(n)+')';
 }
 async function refreshMarks(){
   try{
@@ -246,15 +249,25 @@ async function refreshMarks(){
   }catch(e){ /* served read-only: marking is simply unavailable */ }
   updateMarkCount();
 }
-async function setMark(t,on,box){
+// field is 'interested' (I mean to bid) or 'applied' (I have bid -- keep it
+// on the list but stop emailing me about it).
+async function setMark(t,on,box,field){
+  field = field || 'interested';
   const key=markKey(t);
-  const prev=MARKS[key];
-  if(on) MARKS[key]={title:t.title,state:t.state}; else delete MARKS[key];
+  const prev=MARKS[key] ? Object.assign({}, MARKS[key]) : undefined;
+  if(field==='applied'){
+    MARKS[key] = Object.assign({title:t.title,state:t.state}, MARKS[key]||{},
+                               {applied:on});
+  } else if(on){
+    MARKS[key] = Object.assign({title:t.title,state:t.state}, MARKS[key]||{});
+  } else {
+    delete MARKS[key];
+  }
   updateMarkCount();
   try{
     const r=await fetch('interested',{method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({key,on,meta:{title:t.title,state:t.state,
+      body:JSON.stringify({key,on,field,meta:{title:t.title,state:t.state,
         organisation:t.organisation,closing:t.closing,detail_url:t.detail_url,
         portal:t.portal,tender_id:t.tender_id}})});
     if(!r.ok) throw new Error('HTTP '+r.status);
@@ -334,6 +347,8 @@ function render(){
     return `<tr>
       <td><input type="checkbox" class="mk" data-key="${esc(mk)}"${MARKS[mk]?' checked':''}
             title="I intend to bid for this"></td>
+      <td><input type="checkbox" class="ap" data-key="${esc(mk)}"${MARKS[mk]&&MARKS[mk].applied?' checked':''}
+            title="Bid submitted -- stop reminding me"></td>
       <td><span class="st">${esc(t.state)}</span>${
         (t.region && t.region!==t.state)
           ? `<div class="reg" title="Delivery / consignee state">${esc(t.region)}</div>` : ''}</td>
@@ -345,7 +360,7 @@ function render(){
       <td class="nowrap">${esc(t.published)}</td>
       <td class="nowrap">${esc(t.closing)}</td>
       <td><span class="pill ${tl.cls}">${tl.txt}</span></td></tr>`;
-  }).join('') : `<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted)">No tenders match these filters.</td></tr>`;
+  }).join('') : `<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--muted)">No tenders match these filters.</td></tr>`;
 
   const pages=Math.max(1,Math.ceil(VIEW.length/PER));
   $('pginfo').textContent=`Page ${page} of ${pages} · ${fmtN(VIEW.length)} tenders`;
@@ -628,9 +643,21 @@ fetch('tenders.json',{cache:'no-store'}).then(r=>{
 
   // one delegated listener, so it survives every re-render
   $('rows').addEventListener('change', ev=>{
-    const box=ev.target.closest('.mk'); if(!box) return;
+    const box=ev.target.closest('.mk, .ap'); if(!box) return;
     const t=DATA.find(x=>markKey(x)===box.dataset.key);
-    if(t) setMark(t, box.checked, box);
+    if(!t) return;
+    const applied = box.classList.contains('ap');
+    // applying implies interest, so show that immediately
+    if(applied && box.checked){
+      const mk=box.closest('tr').querySelector('.mk');
+      if(mk) mk.checked=true;
+    }
+    // and un-marking interest clears applied with it
+    if(!applied && !box.checked){
+      const ap=box.closest('tr').querySelector('.ap');
+      if(ap) ap.checked=false;
+    }
+    setMark(t, box.checked, box, applied ? 'applied' : 'interested');
   });
   refreshMarks().then(()=>applyFilters(false));
 }).catch(e=>{

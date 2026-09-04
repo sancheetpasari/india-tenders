@@ -89,8 +89,13 @@ def human(delta):
 def collect(marks, tenders, now):
     """Marked tenders still open, soonest deadline first."""
     live = {mark_key(t): t for t in tenders}
-    rows, closed = [], 0
+    rows, closed, applied = [], 0, 0
     for key, m in marks.items():
+        # already bid for: it stays on the dashboard, but nagging about a
+        # tender you have submitted is how a daily mail becomes noise
+        if m.get("applied"):
+            applied += 1
+            continue
         t = live.get(key)
         closing = (t or {}).get("closing") or m.get("closing") or ""
         when = parse_closing(closing)
@@ -109,10 +114,10 @@ def collect(marks, tenders, now):
             "gone": t is None,
         })
     rows.sort(key=lambda r: r["when"] or datetime.max.replace(tzinfo=IST))
-    return rows, closed
+    return rows, closed, applied
 
 
-def render(rows, closed, now):
+def render(rows, closed, applied, now):
     urgent = [r for r in rows if r["when"] and r["when"] - now <= timedelta(hours=48)]
     head = f"{len(rows)} tender{'s' if len(rows) != 1 else ''} you marked"
     if urgent:
@@ -131,6 +136,8 @@ def render(rows, closed, now):
         text.append("")
     if closed:
         text.append(f"{closed} marked tender(s) have now closed and are not listed.")
+    if applied:
+        text.append(f"{applied} already applied for, so not listed.")
     text.append("")
     text.append(f"Generated {now.strftime('%Y-%m-%d %H:%M IST')} from your India Tender Registry.")
 
@@ -167,9 +174,12 @@ def render(rows, closed, now):
         + "".join(tr) + '</table>'
         + (f'<p style="color:#888;font-size:13px">{closed} marked tender(s) have '
            f'now closed and are not listed.</p>' if closed else '')
+        + (f'<p style="color:#888;font-size:13px">{applied} already applied for, '
+           f'so not listed.</p>' if applied else '')
         + '<p style="color:#888;font-size:12px;margin-top:20px">'
-          'From your India Tender Registry. Untick a tender in the dashboard '
-          'to stop being reminded about it.</p></div>')
+          'From your India Tender Registry. Tick "Applied" once you have bid '
+          'and it drops out of this mail; untick it entirely to forget it.'
+          '</p></div>')
 
     subject = f"Tender reminders: {len(rows)} open"
     if urgent:
@@ -290,12 +300,13 @@ def main():
         tenders = []
 
     now = datetime.now(IST)
-    rows, closed = collect(marks, tenders, now)
+    rows, closed, applied = collect(marks, tenders, now)
     if not rows:
-        print(f"all {closed} marked tender(s) have closed; no email")
+        print(f"nothing left to chase: {closed} closed, {applied} already "
+              "applied for; no email")
         return 0
 
-    subject, text, html = render(rows, closed, now)
+    subject, text, html = render(rows, closed, applied, now)
     sent = send(subject, text, html, args.dry_run)
     if sent and args.announce:
         announce_sent()
