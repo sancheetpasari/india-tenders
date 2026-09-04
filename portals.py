@@ -76,7 +76,7 @@ CENTRAL_SOURCES = {"Central (CPPP)", "Central (etenders)", "Defence (MoD)",
 CUSTOM_SUPPORTED = ["Andhra Pradesh", "Telangana", "Chhattisgarh", "GeM", "ONGC",
                     # Not a procurement portal: notices published as PDFs on
                     # Assam departments' own sites, which GePNIC never sees.
-                    "Assam (departments)"]
+                    "Assam (departments)", "Tripura (departments)"]
 
 # Non-GePNIC states that need a real browser engine (browser_adapters.py).
 BROWSER_SUPPORTED = ["Gujarat", "Bihar"]

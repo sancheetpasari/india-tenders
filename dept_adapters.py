@@ -43,46 +43,54 @@ logging.getLogger('pypdf').setLevel(logging.ERROR)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CACHE = os.path.join(HERE, ".cache", "deadlines.json")
-STATE = "Assam (departments)"
+# Which states have departmental sites worth reading. Assam is the outlier:
+# 28 of its 196 bodies publish tenders on their own pages. Of every other
+# state tried, only Tripura shares the framework at all, and only one of its
+# 88 sites posts tenders. Most states route departmental procurement through
+# their GePNIC portal, which the dashboard already reads.
+ASSAM = "Assam (departments)"
+TRIPURA = "Tripura (departments)"
 
 # Discovered by probing all 196 bodies listed at assam.gov.in/departments-list
 # for a tenders page. Re-check with --probe; sites come and go.
 SITES = [
-    ("Assam Industrial Development Corporation", "aidcltd.assam.gov.in", "/resource/tenders-0"),
-    ("Assam Agricultural Marketing Board", "aasc.assam.gov.in", "/resource/tenders-0"),
-    ("Directorate of Handloom & Textiles", "dht.assam.gov.in", "/resource/tenders-0"),
-    ("Assam Energy Development Agency", "aeda.assam.gov.in", "/documents/tenders"),
-    ("Directorate of Art & Culture", "art.assam.gov.in", "/resource/tenders"),
-    ("Assam State Transport Corporation", "astc.assam.gov.in", "/resource/tenders"),
-    ("Assam Science Technology & Environment Council", "astec.assam.gov.in", "/documents/tenders"),
-    ("Directorate of Dairy Development", "dairy.assam.gov.in", "/resource/tenders-0"),
-    ("Directorate of Tourism", "directortourism.assam.gov.in", "/resource/tenders-0"),
-    ("Directorate of Medical Education", "dme.assam.gov.in", "/resource/tenders-0"),
-    ("Department of Science & Technology", "dst.assam.gov.in", "/documents/tenders"),
-    ("Directorate of Sports & Youth Welfare", "dsyw.assam.gov.in", "/documents/tenders"),
-    ("Guwahati Biotech Park", "gbp.assam.gov.in", "/documents/tenders"),
-    ("Handloom & Textiles Society", "hts.assam.gov.in", "/resource/tenders"),
-    ("Directorate of Industries & Commerce", "industries.assam.gov.in", "/resource/tenders"),
-    ("Industries & Commerce Department", "industriescom.assam.gov.in", "/resource/tenders-0"),
-    ("Guwahati Planetarium", "planetariumguwahati.assam.gov.in", "/documents/tenders"),
-    ("Panchayat & Rural Development", "pnrd.assam.gov.in", "/documents/tenders"),
-    ("Power Department", "power.assam.gov.in", "/resource/tenders-0"),
-    ("PWD Building & NH", "pwdbnh.assam.gov.in", "/resource/tenders"),
-    ("RUSA Assam", "rusa.assam.gov.in", "/resource/tenders"),
-    ("State Agriculture Academy", "saa.assam.gov.in", "/documents/tenders"),
-    ("Directorate of Sericulture", "sericulture.assam.gov.in", "/resource/tenders"),
-    ("Assam Skill Development Mission", "skill.assam.gov.in", "/resource/tenders"),
-    ("Tea Tribes Welfare", "tea.assam.gov.in", "/resource/tenders-0"),
-    ("Assam Tourism", "tourism.assam.gov.in", "/resource/tenders"),
-    ("Transformation & Development", "transdev.assam.gov.in", "/resource/tenders"),
-    ("Assam Innovation & Startup Foundation", "startup.assam.gov.in", "/?page_id=5686"),
+    (ASSAM, "Assam Industrial Development Corporation", "aidcltd.assam.gov.in", "/resource/tenders-0"),
+    (ASSAM, "Assam Agricultural Marketing Board", "aasc.assam.gov.in", "/resource/tenders-0"),
+    (ASSAM, "Directorate of Handloom & Textiles", "dht.assam.gov.in", "/resource/tenders-0"),
+    (ASSAM, "Assam Energy Development Agency", "aeda.assam.gov.in", "/documents/tenders"),
+    (ASSAM, "Directorate of Art & Culture", "art.assam.gov.in", "/resource/tenders"),
+    (ASSAM, "Assam State Transport Corporation", "astc.assam.gov.in", "/resource/tenders"),
+    (ASSAM, "Assam Science Technology & Environment Council", "astec.assam.gov.in", "/documents/tenders"),
+    (ASSAM, "Directorate of Dairy Development", "dairy.assam.gov.in", "/resource/tenders-0"),
+    (ASSAM, "Directorate of Tourism", "directortourism.assam.gov.in", "/resource/tenders-0"),
+    (ASSAM, "Directorate of Medical Education", "dme.assam.gov.in", "/resource/tenders-0"),
+    (ASSAM, "Department of Science & Technology", "dst.assam.gov.in", "/documents/tenders"),
+    (ASSAM, "Directorate of Sports & Youth Welfare", "dsyw.assam.gov.in", "/documents/tenders"),
+    (ASSAM, "Guwahati Biotech Park", "gbp.assam.gov.in", "/documents/tenders"),
+    (ASSAM, "Handloom & Textiles Society", "hts.assam.gov.in", "/resource/tenders"),
+    (ASSAM, "Directorate of Industries & Commerce", "industries.assam.gov.in", "/resource/tenders"),
+    (ASSAM, "Industries & Commerce Department", "industriescom.assam.gov.in", "/resource/tenders-0"),
+    (ASSAM, "Guwahati Planetarium", "planetariumguwahati.assam.gov.in", "/documents/tenders"),
+    (ASSAM, "Panchayat & Rural Development", "pnrd.assam.gov.in", "/documents/tenders"),
+    (ASSAM, "Power Department", "power.assam.gov.in", "/resource/tenders-0"),
+    (ASSAM, "PWD Building & NH", "pwdbnh.assam.gov.in", "/resource/tenders"),
+    (ASSAM, "RUSA Assam", "rusa.assam.gov.in", "/resource/tenders"),
+    (ASSAM, "State Agriculture Academy", "saa.assam.gov.in", "/documents/tenders"),
+    (ASSAM, "Directorate of Sericulture", "sericulture.assam.gov.in", "/resource/tenders"),
+    (ASSAM, "Assam Skill Development Mission", "skill.assam.gov.in", "/resource/tenders"),
+    (ASSAM, "Tea Tribes Welfare", "tea.assam.gov.in", "/resource/tenders-0"),
+    (ASSAM, "Assam Tourism", "tourism.assam.gov.in", "/resource/tenders"),
+    (ASSAM, "Transformation & Development", "transdev.assam.gov.in", "/resource/tenders"),
+    (ASSAM, "Assam Innovation & Startup Foundation", "startup.assam.gov.in", "/?page_id=5686"),
     # AIIDC's own documents section renders nothing at all -- tenders,
     # notifications and office orders alike, with or without a browser, and an
     # old detail URL 404s. Its tenders reach GePNIC instead, where the
     # dashboard already has them. Kept here so that the day it starts posting
     # to its own site again, it is picked up without anyone noticing it had to be.
-    ("Assam Industrial Infrastructure Development Corporation",
+    (ASSAM, "Assam Industrial Infrastructure Development Corporation",
      "aiidc.assam.gov.in", "/documents/tenders-9"),
+    (TRIPURA, "Tripura State Pollution Control Board", "tspcb.tripura.gov.in",
+     "/resource/tenders"),
 ]
 
 NOTICE = re.compile(
@@ -186,7 +194,7 @@ def deadline_for(s, url, cache):
     return got
 
 
-def scrape_site(s, name, host, path, cache, since, recent, budget):
+def scrape_site(s, label, name, host, path, cache, since, recent, budget):
     base = f"https://{host}"
     try:
         r = s.get(base + path, timeout=30, verify=False)
@@ -214,7 +222,7 @@ def scrape_site(s, name, host, path, cache, since, recent, budget):
                 pub = datetime.strptime(up, "%Y-%m-%d").strftime("%d-%b-%Y")
             except ValueError:
                 pub = ""
-        t = {"state": STATE, "region": "Assam", "sector": "",
+        t = {"state": label, "region": label.split(" (")[0], "sector": "",
              "tender_id": ref[:60], "ref_no": ref[:60], "title": title,
              "organisation": name, "published": pub, "closing": closing,
              "opening": "", "corrigendum": "", "ecv": "",
@@ -229,7 +237,7 @@ def scrape_site(s, name, host, path, cache, since, recent, budget):
     return name, rows, f"{len(rows)} from {len(entries)} listed"
 
 
-def scrape(days=120, workers=6, max_pdfs=200):
+def scrape(label=ASSAM, days=120, workers=6, max_pdfs=200):
     """Every Assam departmental tender uploaded in the last `days` days."""
     s = session()
     cache = load_cache()
@@ -238,8 +246,8 @@ def scrape(days=120, workers=6, max_pdfs=200):
     rows, notes = [], []
     with cf.ThreadPoolExecutor(max_workers=workers) as ex:
         budget = {"left": max_pdfs}
-        futs = [ex.submit(scrape_site, s, n, h, p, cache, since, recent, budget)
-                for n, h, p in SITES]
+        futs = [ex.submit(scrape_site, s, lb, n, h, p, cache, since, recent, budget)
+                for lb, n, h, p in SITES if lb == label]
         for f in cf.as_completed(futs):
             name, got, note = f.result()
             rows.extend(got)
@@ -247,15 +255,17 @@ def scrape(days=120, workers=6, max_pdfs=200):
     save_cache(cache)
     dated = sum(1 for r in rows if r["closing"])
     live = len({r["organisation"] for r in rows})
-    note = (f"{len(rows)} notices from {live} of {len(SITES)} Assam bodies, "
+    total = sum(1 for lb, *_ in SITES if lb == label)
+    note = (f"{len(rows)} notices from {live} of {total} "
+            f"{label.split(' (')[0]} bodies, "
             f"{dated} with a deadline read from the PDF")
-    return STATE, rows, note
+    return label, rows, note
 
 
 def main():
     if "--probe" in sys.argv:
         s = session()
-        for name, host, path in SITES:
+        for label, name, host, path in SITES:
             try:
                 r = s.get(f"https://{host}{path}", timeout=20, verify=False)
                 n = len(parse_listing(r.text, f"https://{host}"))
@@ -263,8 +273,9 @@ def main():
             except Exception as e:                        # noqa: BLE001
                 print(f"  {host:<38} ERROR {type(e).__name__}")
         return
-    state, rows, note = scrape()
-    print(note)
+    for label in (ASSAM, TRIPURA):
+        state, rows, note = scrape(label)
+        print(note)
     for r in sorted(rows, key=lambda x: x["closing"] or "z")[:25]:
         print(f"  {r['closing'] or '(no deadline)':<22} {r['organisation'][:28]:<30} "
               f"{r['title'][:52]}")

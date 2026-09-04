@@ -466,7 +466,7 @@ def scrape_ongc(state="ONGC", host="tenders.ongc.co.in", timeout=90):
 
 # --------------------------------------------------------------------- registry
 
-def scrape_assam_depts(state, host, timeout=180):
+def scrape_dept_sites(state, host, timeout=180):
     """Notices on Assam departmental sites, which no procurement portal lists.
 
     A different kind of source: the deadline is inside the PDF rather than in
@@ -474,7 +474,7 @@ def scrape_assam_depts(state, host, timeout=180):
     because it pulls in a PDF parser this module does not otherwise need.
     """
     import dept_adapters
-    return dept_adapters.scrape()
+    return dept_adapters.scrape(state)
 
 
 CUSTOM = {
@@ -483,7 +483,8 @@ CUSTOM = {
     "Chhattisgarh":   (scrape_cg,   "eproc.cgstate.gov.in"),
     "GeM":            (scrape_gem,  GEM_BASE),
     "ONGC":           (scrape_ongc, "tenders.ongc.co.in"),
-    "Assam (departments)": (scrape_assam_depts, "assam.gov.in"),
+    "Assam (departments)":   (scrape_dept_sites, "assam.gov.in"),
+    "Tripura (departments)": (scrape_dept_sites, "tripura.gov.in"),
 }
 
 
