@@ -34,8 +34,12 @@ import sys
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from email.utils import formatdate
+from urllib.parse import quote
 
 IST = timezone(timedelta(hours=5, minutes=30))
+# Where a forwarded reader is sent for anything that is not a GeM PDF.
+SITE = (os.environ.get("TENDER_SITE")
+        or "https://sancheetpasari.github.io/india-tenders/")
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 MONTHS = {m: i + 1 for i, m in enumerate(
@@ -98,6 +102,7 @@ def collect(marks, tenders, now):
             continue
         t = live.get(key)
         detail = (t or {}).get("detail_url") or m.get("detail_url") or ""
+        tid = (t or {}).get("tender_id") or m.get("tender_id") or ""
         closing = (t or {}).get("closing") or m.get("closing") or ""
         when = parse_closing(closing)
         if when and when < now:
@@ -110,13 +115,16 @@ def collect(marks, tenders, now):
             "closing": closing or "date not published",
             "when": when,
             "left": human(when - now) if when else "",
-            "tid": (t or {}).get("tender_id") or m.get("tender_id") or "",
-            # A GePNIC deep link resolves only inside a live session, so it is
-            # useless to anyone this mail is forwarded to. Give them the portal
-            # and the tender ID to search for. GeM's bid document is a plain
-            # PDF that opens for anybody, so link that one directly.
+            "tid": tid,
+            # GeM's bid document is a plain PDF: link it and anyone can open
+            # it. A GePNIC deep link is useless in a mail -- it needs a live
+            # session, so forwarding one lands the reader on "session has
+            # timed out". Send them to the dashboard filtered to that tender
+            # instead: clicking it there primes the session first, which is
+            # the only way the portal will show it.
             "url": (detail if "showbidDocument" in detail
-                    else ((t or {}).get("portal") or m.get("portal") or detail)),
+                    else (SITE + "?q=" + quote(tid) if tid
+                          else ((t or {}).get("portal") or m.get("portal") or detail))),
             "direct": "showbidDocument" in detail,
             "gone": t is None,
         })
@@ -137,8 +145,7 @@ def render(rows, closed, applied, now):
         text.append(f"  {r['title']}")
         text.append(f"  {r['state']} - {r['org']}")
         if r["tid"]:
-            text.append(f"  Tender ID: {r['tid']}"
-                        + ("" if r["direct"] else "   (search this on the portal)"))
+            text.append(f"  Tender ID: {r['tid']}")
         if r["url"]:
             text.append(f"  {r['url']}")
         if r["gone"]:
@@ -175,7 +182,6 @@ def render(rows, closed, applied, now):
             f'{" &middot; " + esc(r["org"]) if r["org"] else ""}</div>'
             + (f'<div style="color:#666;font-size:12px">Tender ID '
                f'<b>{esc(r["tid"])}</b>'
-               + ('' if r["direct"] else ' &mdash; search this on the portal')
                + '</div>' if r["tid"] else '')
             + '</td>'
             f'</tr>')

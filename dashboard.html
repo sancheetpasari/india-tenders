@@ -461,7 +461,13 @@ function agoText(iso){
 function renderSub(){
   const d=META||{};
   const sub=$('sub'); if(!sub) return;
-  sub.innerHTML=`${fmtN(d.count||0)} active tenders closing within ${esc(d.window_days)} days · `+
+  // Count what is still open, not everything collected. A tender whose
+  // deadline passed this morning is in the file but is not active, and
+  // calling it active disagrees with the Open tenders tile below.
+  const _now=new Date();
+  const openN=DATA.length ? DATA.filter(t=>!t._close||t._close>=_now).length
+                          : (d.count||0);
+  sub.innerHTML=`${fmtN(openN)} active tenders closing within ${esc(d.window_days)} days · `+
     `${(d.sources||[]).length} portals · `+
     `updated <b>${esc(agoText(d.generated_at))}</b> <span class="note">(${esc(d.generated_at||'')})</span>`+
     (d.partial?` · <b style="color:var(--warn)">refreshing now — more still loading</b>`

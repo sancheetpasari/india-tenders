@@ -611,11 +611,18 @@ function istAgo(str){
   if(h < 24) return h + ' h ago';
   return Math.floor(h/24) + ' d ago';
 }
+// Still open, not everything collected: a deadline that passed this morning
+// is in the payload but is not an opportunity, and the Open tenders tile
+// already excludes it.
+function openNow(){
+  const t0 = new Date();
+  return ALL.filter(t => !t._c || t._c >= t0).length;
+}
 function stampLine(){
   $('stamp').innerHTML =
     `updated <b>${esc(istAgo(D.generated_at))}</b> `+
     `<span class="note">${esc(D.generated_at)}</span><br>`+
-    `${nf.format(D.rows.length)} tenders · closing within ${esc(D.window)} days`+
+    `${nf.format(openNow())} tenders · closing within ${esc(D.window)} days`+
     ` · rebuilt 00:00 &amp; 12:00 IST`;
 }
 stampLine();
@@ -775,6 +782,16 @@ setInterval(() => {
   stampLine();
   window.scrollTo(0, y);
 }, 60000);
+// A reminder email cannot open a GePNIC tender: its deep link needs a live
+// session, so a forwarded link lands on "session has timed out". The mail
+// therefore points here with ?q=<tender id>, which narrows the table to that
+// one tender -- and clicking it here does the session dance properly.
+(function fromLink(){
+  const q = new URLSearchParams(location.search).get('q');
+  if(!q) return;
+  const box = $('q');
+  if(box) box.value = q;
+})();
 apply();
 })();
 </script>
