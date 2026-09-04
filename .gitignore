@@ -20,3 +20,6 @@ _upload/
 
 # gzip cache for the local server
 .cache/
+
+# Reminder send log
+reminder-history.log

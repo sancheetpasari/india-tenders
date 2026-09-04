@@ -27,7 +27,9 @@ import gzip
 import json
 import os
 import re
+import shutil
 import smtplib
+import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
@@ -175,18 +177,39 @@ def render(rows, closed, now):
     return subject, "\n".join(text), html
 
 
+def smtp_password(user):
+    """The app password, from the environment or Windows Credential Manager.
+
+    In Actions it arrives as a secret. On the laptop there is nowhere safe to
+    put it in the repository, so it lives in the OS credential store and never
+    touches a file. Set it once with:
+
+        python -c "import keyring,getpass; keyring.set_password(
+            'india-tenders', 'smtp', getpass.getpass('app password: '))"
+    """
+    pwd = os.environ.get("SMTP_PASS")
+    if pwd:
+        return pwd
+    try:
+        import keyring
+        return keyring.get_password("india-tenders", "smtp") or ""
+    except Exception:                                     # noqa: BLE001
+        return ""
+
+
 def send(subject, text, html, dry_run):
-    user, pwd = os.environ.get("SMTP_USER"), os.environ.get("SMTP_PASS")
+    user = os.environ.get("SMTP_USER")
+    pwd = smtp_password(user)
     to = os.environ.get("MAIL_TO") or user
     if dry_run:
         print(f"Subject: {subject}\nTo: {to or '(MAIL_TO unset)'}\n")
         print(text)
-        return 0
+        return False
     if not any((user, pwd, os.environ.get("MAIL_TO"))):
         # never configured -- say so once a day rather than failing red
         print("SMTP is not configured, so no mail was sent. Set the SMTP_USER, "
               "SMTP_PASS and MAIL_TO secrets to turn reminders on.")
-        return 0
+        return False
     if not (user and pwd and to):
         sys.exit("SMTP is only half configured: SMTP_USER, SMTP_PASS and "
                  "MAIL_TO must all be set")
@@ -206,7 +229,29 @@ def send(subject, text, html, dry_run):
         smtp.login(user, pwd)
         smtp.send_message(msg)
     print(f"sent to {to}: {subject}")
-    return 0
+    return True
+
+
+def announce_sent():
+    """Tell the cloud fallback that today is handled.
+
+    GitHub's scheduler runs this repository's crons hours late and sometimes
+    not at all, so the laptop sends the digest and the workflow is only a
+    fallback for days the laptop is off. It reads this repository variable
+    and stands down if the date is today, which is what stops two emails
+    landing on the same morning.
+
+    GITHUB_TOKEN cannot write variables, so only the laptop sets it.
+    """
+    gh = shutil.which("gh") or r"C:\Program Files\GitHub CLI\gh.exe"
+    if not os.path.exists(gh):
+        print("note: GitHub CLI not found; the cloud fallback may send a second copy")
+        return
+    today = datetime.now(IST).strftime("%Y-%m-%d")
+    p = subprocess.run([gh, "variable", "set", "LAST_REMINDER_SENT", "--body", today],
+                       capture_output=True, text=True)
+    print(f"marked {today} as sent" if p.returncode == 0
+          else f"note: could not set LAST_REMINDER_SENT: {p.stderr.strip()[:120]}")
 
 
 def main():
@@ -214,6 +259,9 @@ def main():
     ap.add_argument("--marks", default=os.path.join(HERE, "interested.json"))
     ap.add_argument("--data", default=os.path.join(HERE, "tenders.json"))
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--announce", action="store_true",
+                    help="after sending, record today against the repository "
+                         "so the cloud fallback does not send a second copy")
     args = ap.parse_args()
 
     try:
@@ -238,7 +286,10 @@ def main():
         return 0
 
     subject, text, html = render(rows, closed, now)
-    return send(subject, text, html, args.dry_run)
+    sent = send(subject, text, html, args.dry_run)
+    if sent and args.announce:
+        announce_sent()
+    return 0
 
 
 if __name__ == "__main__":

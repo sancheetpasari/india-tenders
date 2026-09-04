@@ -1,9 +1,13 @@
 name: Tender reminders
 
-# 08:00 IST. GitHub cron is UTC, and IST is UTC+5:30.
+# The laptop sends this at 08:00 IST, on time, via Task Scheduler. This is the
+# fallback for mornings it is off -- deliberately later, so the laptop gets
+# first go. GitHub's own scheduler runs this repository's crons hours late and
+# sometimes skips them, which is exactly why it is not the primary any more.
+# 11:00 IST; cron is UTC and IST is UTC+5:30.
 on:
   schedule:
-    - cron: "30 2 * * *"
+    - cron: "30 5 * * *"
   workflow_dispatch:
 
 permissions:
@@ -20,7 +24,22 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Stand down if the laptop already sent today
+        id: guard
+        env:
+          LAST: ${{ vars.LAST_REMINDER_SENT }}
+        run: |
+          today=$(TZ=Asia/Kolkata date +%F)
+          if [ "$LAST" = "$today" ]; then
+            echo "the laptop already sent today's digest ($today); nothing to do"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "no send recorded for $today (last: ${LAST:-never}); carrying on"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Load the bid list
+        if: steps.guard.outputs.skip != 'true'
         # It arrives as a secret, not a release asset: this repository is
         # public and so are its assets, and which contracts are being bid for
         # is not something to publish. push_to_cloud.py updates it after each
@@ -36,11 +55,13 @@ jobs:
           fi
 
       - name: Fetch the latest data
+        if: steps.guard.outputs.skip != 'true'
         run: |
           site="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/tenders.json.gz"
           curl -fsSL --max-time 180 "$site" -o tenders.json.gz || echo "no publish yet"
 
       - name: Send the digest
+        if: steps.guard.outputs.skip != 'true'
         # Absent credentials are reported, not fatal: the schedule should not
         # go red every morning just because reminders are not switched on yet.
         env:
