@@ -406,11 +406,11 @@ function primeThenOpen(portal, url){
     if(!answered && !timedOut) return;
     clearInterval(tick);
     if(w.closed) return;
-    // Twelve seconds and the portal still has not replied: it is struggling,
-    // and the deep link sits on the same host. Replacing a slow load with a
-    // second request to the same server just trades it for an error page --
-    // leave the portal loading and let the reader search the tender ID.
-    if(timedOut && !answered) return;
+    // Follow the link even if the portal never announced itself. Giving up
+    // here leaves the reader on the portal's front page wondering why their
+    // tender did not open, which is worse than a page they can retry -- and
+    // the "can't be reached" this once guarded against turned out to be a
+    // dropping Wi-Fi connection, not a slow portal.
     // NIC portals often redirect or rewrite once more just after the first
     // response. Navigating into the middle of that races it and can land
     // on an error page, so let it settle first.
