@@ -67,7 +67,8 @@ def push_marks(gh):
 
     def trim(v):
         d = {f: str(v.get(f) or "")[:200] for f in
-             ("title", "state", "organisation", "closing", "detail_url")}
+             ("title", "state", "organisation", "closing", "detail_url",
+              "portal", "tender_id")}
         # a bool, not str(): "False" is a truthy string and would silence
         # every reminder
         d["applied"] = bool(v.get("applied"))

@@ -97,6 +97,7 @@ def collect(marks, tenders, now):
             applied += 1
             continue
         t = live.get(key)
+        detail = (t or {}).get("detail_url") or m.get("detail_url") or ""
         closing = (t or {}).get("closing") or m.get("closing") or ""
         when = parse_closing(closing)
         if when and when < now:
@@ -109,8 +110,14 @@ def collect(marks, tenders, now):
             "closing": closing or "date not published",
             "when": when,
             "left": human(when - now) if when else "",
-            "url": ((t or {}).get("detail_url") or m.get("detail_url")
-                    or (t or {}).get("portal") or m.get("portal") or ""),
+            "tid": (t or {}).get("tender_id") or m.get("tender_id") or "",
+            # A GePNIC deep link resolves only inside a live session, so it is
+            # useless to anyone this mail is forwarded to. Give them the portal
+            # and the tender ID to search for. GeM's bid document is a plain
+            # PDF that opens for anybody, so link that one directly.
+            "url": (detail if "showbidDocument" in detail
+                    else ((t or {}).get("portal") or m.get("portal") or detail)),
+            "direct": "showbidDocument" in detail,
             "gone": t is None,
         })
     rows.sort(key=lambda r: r["when"] or datetime.max.replace(tzinfo=IST))
@@ -129,6 +136,9 @@ def render(rows, closed, applied, now):
         text.append(f"{r['closing']}   ({r['left']} left){flag}")
         text.append(f"  {r['title']}")
         text.append(f"  {r['state']} - {r['org']}")
+        if r["tid"]:
+            text.append(f"  Tender ID: {r['tid']}"
+                        + ("" if r["direct"] else "   (search this on the portal)"))
         if r["url"]:
             text.append(f"  {r['url']}")
         if r["gone"]:
@@ -162,7 +172,12 @@ def render(rows, closed, applied, now):
             f'font-size:12px">{esc(r["left"])} left</div></td>'
             f'<td style="padding:10px 12px;border-bottom:1px solid #eee">{link}{note}'
             f'<div style="color:#666;font-size:12px">{esc(r["state"])}'
-            f'{" &middot; " + esc(r["org"]) if r["org"] else ""}</div></td>'
+            f'{" &middot; " + esc(r["org"]) if r["org"] else ""}</div>'
+            + (f'<div style="color:#666;font-size:12px">Tender ID '
+               f'<b>{esc(r["tid"])}</b>'
+               + ('' if r["direct"] else ' &mdash; search this on the portal')
+               + '</div>' if r["tid"] else '')
+            + '</td>'
             f'</tr>')
 
     html = (
