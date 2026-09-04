@@ -76,6 +76,13 @@ SITES = [
     ("Assam Tourism", "tourism.assam.gov.in", "/resource/tenders"),
     ("Transformation & Development", "transdev.assam.gov.in", "/resource/tenders"),
     ("Assam Innovation & Startup Foundation", "startup.assam.gov.in", "/?page_id=5686"),
+    # AIIDC's own documents section renders nothing at all -- tenders,
+    # notifications and office orders alike, with or without a browser, and an
+    # old detail URL 404s. Its tenders reach GePNIC instead, where the
+    # dashboard already has them. Kept here so that the day it starts posting
+    # to its own site again, it is picked up without anyone noticing it had to be.
+    ("Assam Industrial Infrastructure Development Corporation",
+     "aiidc.assam.gov.in", "/documents/tenders-9"),
 ]
 
 NOTICE = re.compile(
