@@ -211,8 +211,18 @@ def send(subject, text, html, dry_run):
               "SMTP_PASS and MAIL_TO secrets to turn reminders on.")
         return False
     if not (user and pwd and to):
-        sys.exit("SMTP is only half configured: SMTP_USER, SMTP_PASS and "
-                 "MAIL_TO must all be set")
+        missing = [n for n, v in (("SMTP_USER", user), ("password", pwd),
+                                  ("MAIL_TO", to)) if not v]
+        print(f"SMTP is not fully configured; missing: {', '.join(missing)}")
+        if not pwd:
+            print("  In Actions the password comes from the SMTP_PASS secret; on")
+            print("  this machine from Windows Credential Manager. Store it with:")
+            print("    python -c \"import keyring,getpass; keyring.set_password("
+                  "'india-tenders','smtp', getpass.getpass('app password: '))\"")
+            print("  Run that in a real terminal window: getpass cannot read a")
+            print("  password where stdin is not a console, and will store an")
+            print("  empty one without complaining.")
+        sys.exit(1)
 
     msg = EmailMessage()
     msg["Subject"] = subject
