@@ -73,7 +73,10 @@ VIA_CPPP = ["Andaman & Nicobar", "Lakshadweep"]
 CENTRAL_SOURCES = {"Central (CPPP)", "Central (etenders)", "Defence (MoD)",
                    "Coal India", "NTPC", "GeM", "ONGC"}
 
-CUSTOM_SUPPORTED = ["Andhra Pradesh", "Telangana", "Chhattisgarh", "GeM", "ONGC"]
+CUSTOM_SUPPORTED = ["Andhra Pradesh", "Telangana", "Chhattisgarh", "GeM", "ONGC",
+                    # Not a procurement portal: notices published as PDFs on
+                    # Assam departments' own sites, which GePNIC never sees.
+                    "Assam (departments)"]
 
 # Non-GePNIC states that need a real browser engine (browser_adapters.py).
 BROWSER_SUPPORTED = ["Gujarat", "Bihar"]

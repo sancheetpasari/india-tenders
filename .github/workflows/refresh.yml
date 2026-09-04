@@ -65,6 +65,11 @@ jobs:
           [ -f seed/tenders.json.gz ] && cp seed/tenders.json.gz committed.json.gz || true
           python .github/pick_baseline.py
 
+      - name: Sanity checks
+        run: |
+          python checks.py
+          python sector.py
+
       - name: Scrape every portal
         # skip_scrape republishes the existing data, for a change to the page
         # itself. Sweeping 42 government portals again to correct a label is
