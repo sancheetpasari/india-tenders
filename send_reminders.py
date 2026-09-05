@@ -273,6 +273,23 @@ def send(subject, text, html, dry_run):
     return True
 
 
+def already_sent_today():
+    """Has today's digest already gone out, from here or from the cloud?
+
+    The laptop is allowed to run late -- a machine asleep at 08:00 should
+    still send when it wakes -- and by then the 11:00 cloud fallback may have
+    sent. Both write and read the same repository variable, so whichever gets
+    there first wins and the other stays quiet.
+    """
+    gh = shutil.which("gh") or r"C:\Program Files\GitHub CLI\gh.exe"
+    if not os.path.exists(gh):
+        return False
+    p = subprocess.run(
+        [gh, "api", "repos/{owner}/{repo}/actions/variables/LAST_REMINDER_SENT",
+         "--jq", ".value"], capture_output=True, text=True)
+    return p.returncode == 0 and p.stdout.strip() == datetime.now(IST).strftime("%Y-%m-%d")
+
+
 def announce_sent():
     """Tell the cloud fallback that today is handled.
 
@@ -304,6 +321,10 @@ def main():
                     help="after sending, record today against the repository "
                          "so the cloud fallback does not send a second copy")
     args = ap.parse_args()
+
+    if args.announce and already_sent_today():
+        print("today's digest has already been sent; nothing to do")
+        return 0
 
     try:
         marks = (load_json(args.marks) or {}).get("marks", {})
