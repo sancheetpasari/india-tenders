@@ -18,6 +18,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import atexit
 import concurrent.futures as cf
 import csv
 import html
@@ -393,6 +394,38 @@ def load_baseline(outdir):
     return by_state, prev.get("generated_at"), prev_sources
 
 
+def keep_awake():
+    """Ask Windows not to sleep while the scrape runs.
+
+    The midnight run starts on a laptop that is asleep on battery: the task
+    wakes the machine, but nothing holds it awake, so it drifts back to sleep
+    part way through and the run dies with STATUS_CONTROL_C_EXIT. Windows
+    reports that as a hex code in a Task Scheduler column, so the scrape
+    simply stops happening and nothing says why.
+
+    Best effort: on anything but Windows, or if the call fails, carry on.
+    """
+    if not sys.platform.startswith("win"):
+        return
+    try:
+        import ctypes
+        ES_CONTINUOUS, ES_SYSTEM_REQUIRED = 0x80000000, 0x00000001
+        ctypes.windll.kernel32.SetThreadExecutionState(
+            ES_CONTINUOUS | ES_SYSTEM_REQUIRED)
+    except Exception:                                      # noqa: BLE001
+        pass
+
+
+def release_awake():
+    if not sys.platform.startswith("win"):
+        return
+    try:
+        import ctypes
+        ctypes.windll.kernel32.SetThreadExecutionState(0x80000000)
+    except Exception:                                      # noqa: BLE001
+        pass
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--window", choices=["today", "7", "14"], default="14")
@@ -411,6 +444,8 @@ def main():
                     help="skip the non-GePNIC states handled by adapters.py")
     ap.add_argument("--outdir", default=".")
     args = ap.parse_args()
+    keep_awake()
+    atexit.register(release_awake)
 
     targets = [(s, h, c) for s, h, c in portals.active_portals()
                if not args.states or s in args.states]
