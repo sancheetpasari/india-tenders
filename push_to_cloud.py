@@ -21,6 +21,8 @@ import shutil
 import subprocess
 import sys
 
+import keepawake
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, "tenders.json")
 UPLOAD_DIR = os.path.join(HERE, "_upload")
@@ -91,6 +93,7 @@ def push_marks(gh):
 
 
 def main():
+    keepawake.keep_awake()
     gh = gh_path()
     if run(gh, "auth", "status", check=False).returncode != 0:
         sys.exit("Not logged in. Run:  gh auth login")

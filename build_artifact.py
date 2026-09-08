@@ -18,6 +18,8 @@ import os
 import re
 import sys
 
+import keepawake
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE = os.path.join(HERE, "share", "tender-registry.template.html")
 OUT = os.path.join(HERE, "share", "tender-registry.html")
@@ -166,6 +168,7 @@ def render(tpl, payload):
 
 
 def main():
+    keepawake.keep_awake()
     if not os.path.exists(SRC):
         sys.exit("tenders.json not found -- run scraper.py first.")
     if not os.path.exists(TEMPLATE):
