@@ -89,6 +89,12 @@ SITES = [
     # to its own site again, it is picked up without anyone noticing it had to be.
     (ASSAM, "Assam Industrial Infrastructure Development Corporation",
      "aiidc.assam.gov.in", "/documents/tenders-9"),
+    # GMDA puts some tenders on the Assam GePNIC portal and advertises others
+    # only on paper -- GMDA/DEV/89/2026/2 of 05-09-2026 appears in neither its
+    # own tenders page nor the portal. The page exists and is empty; poll it so
+    # that anything it does carry is picked up.
+    (ASSAM, "Guwahati Metropolitan Development Authority", "gmda.assam.gov.in",
+     "/resource/tenders-0"),
     (TRIPURA, "Tripura State Pollution Control Board", "tspcb.tripura.gov.in",
      "/resource/tenders"),
 ]

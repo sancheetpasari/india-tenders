@@ -1,6 +1,16 @@
 @echo off
 rem Tender refresh - run by Windows Task Scheduler at 00:00 and 12:00
 cd /d "%~dp0"
+
+rem Keep Chromium off C:. Gujarat and Bihar kept failing with "BrowserType.launch:
+rem Executable doesn't exist" on scheduled runs while the same command worked in an
+rem interactive shell. C: sits near-full and Storage Sense reclaims %LOCALAPPDATA%
+rem caches under disk pressure, so the default ms-playwright cache there is not a
+rem safe place for it. D: has room. Set here as well as in the user environment:
+rem a task started from an existing logon inherits that logon's environment block,
+rem so a newly-set user variable would not reach this run.
+set "PLAYWRIGHT_BROWSERS_PATH=D:\playwright-browsers"
+
 rem what this context resolves -- see probe_env.py
 python probe_env.py >> refresh-history.log 2>&1
 python scraper.py --window 14 --deadline 900 >> refresh-history.log 2>&1

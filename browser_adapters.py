@@ -18,7 +18,11 @@ Adapters return the same dict shape as scraper.py / adapters.py.
 """
 from __future__ import annotations
 
+import os
 import re
+import subprocess
+import sys
+import threading
 import time
 
 from adapters import MONTHS, clean
@@ -228,13 +232,65 @@ BROWSER_CUSTOM = {
 }
 
 
+def _chromium_path():
+    """Where Playwright will look for Chromium, or None if it cannot say."""
+    try:
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as p:
+            return p.chromium.executable_path
+    except Exception:                                          # noqa: BLE001
+        return None
+
+
+def _install_chromium():
+    """Put Chromium back if it has gone missing, so a run repairs itself.
+
+    Gujarat and Bihar dropped out of the scrape for days with "BrowserType.launch:
+    Executable doesn't exist" while the same command worked in an interactive
+    shell. refresh-tenders.bat now pins PLAYWRIGHT_BROWSERS_PATH to D: because the
+    default cache under %LOCALAPPDATA% sits on a near-full C: that Storage Sense
+    reclaims. This is the second line of defence: if the browser is gone anyway,
+    fetch it rather than lose two states until someone reads the log.
+    """
+    path = _chromium_path()
+    if path and os.path.exists(path):
+        return True, ""
+    proc = subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"],
+                          capture_output=True, text=True)
+    if proc.returncode != 0:
+        tail = (proc.stderr or proc.stdout or "").strip().replace("\n", " ")
+        return False, f"chromium missing, reinstall failed: {tail[-160:]}"
+    path = _chromium_path()
+    if not (path and os.path.exists(path)):
+        return False, f"chromium still missing after reinstall (looked at {path})"
+    return True, "chromium was missing, reinstalled"
+
+
+_ensure_lock = threading.Lock()
+_ensure_result = None
+
+
+def _ensure_chromium():
+    """_install_chromium() once, even though the states run on separate threads."""
+    global _ensure_result
+    with _ensure_lock:
+        if _ensure_result is None:
+            _ensure_result = _install_chromium()
+    return _ensure_result
+
+
 def scrape_browser(state, headless=True, deadline_s=900):
     if not _available():
         return state, [], "playwright not installed (pip install playwright)"
+    ok, repair = _ensure_chromium()
+    if not ok:
+        return state, [], f"ERROR {repair}"
     try:
         fn = BROWSER_CUSTOM[state]
         if state == "Gujarat":
-            return fn(state, headless=headless, deadline_s=deadline_s)
-        return fn(state, headless=headless)
+            state, out, note = fn(state, headless=headless, deadline_s=deadline_s)
+        else:
+            state, out, note = fn(state, headless=headless)
     except Exception as e:                                     # noqa: BLE001
-        return state, [], f"ERROR {type(e).__name__}: {str(e)[:70]}"
+        return state, [], f"ERROR {type(e).__name__}: {str(e)[:160]}"
+    return state, out, (f"{note} ({repair})" if repair else note)
