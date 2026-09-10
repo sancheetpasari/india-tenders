@@ -144,10 +144,20 @@ def build_payload(data, rows_override=None):
                "Defence (MoD)", "Coal India", "NTPC"}
     geo_covered = len({s["state"] for s in data.get("sources", [])
                        if s["state"] not in central})
+    # A scrape that dies partway keeps the previous run's rows for every state
+    # it did not reach, so generated_at can read minutes old while nearly all
+    # the data is days old. Carry the staleness through so the page can say so
+    # instead of presenting carried-over rows as a fresh snapshot.
+    srcs = data.get("sources", [])
+    stale = [s for s in srcs if s.get("status") != "ok"]
+    stamps = sorted(s["scraped_at"] for s in stale if s.get("scraped_at"))
     return {"generated_at": data["generated_at"], "window": data["window_days"],
             "states": states, "portals": portals, "orgs": orgs, "rows": rows,
             "marked": marked, "geo_covered": geo_covered,
-            "sources_total": len(data.get("sources", []))}
+            "sources_total": len(srcs),
+            "partial": bool(data.get("partial")),
+            "stale_sources": len(stale),
+            "oldest_source": stamps[0] if stamps else None}
 
 
 def render(tpl, payload):

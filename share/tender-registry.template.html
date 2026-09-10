@@ -64,6 +64,7 @@ h1{
   text-align:right;line-height:1.7;
 }
 .stamp b{color:var(--ink);font-weight:600}
+.stamp .stale{color:var(--soon);font-weight:600;display:inline-block;max-width:44ch;text-wrap:balance}
 
 /* ---------- stat strip ---------- */
 .stats{
@@ -608,7 +609,10 @@ function istAgo(str){
   if(mins < 1)  return 'just now';
   if(mins < 60) return mins + ' min ago';
   const h = Math.floor(mins/60);
-  if(h < 24) return h + ' h ago';
+  // Hours right up to 48, not 24: flooring to days turns 44-hour-old rows into
+  // "1 d ago", which understates staleness in the range the carried-over-source
+  // warning exists to flag. Past two days, days are precise enough.
+  if(h < 48) return h + ' h ago';
   return Math.floor(h/24) + ' d ago';
 }
 // Still open, not everything collected: a deadline that passed this morning
@@ -618,12 +622,30 @@ function openNow(){
   const t0 = new Date();
   return ALL.filter(t => !t._c || t._c >= t0).length;
 }
+// generated_at is when this page's data was written, which is not when it was
+// read off the portals: an interrupted scrape re-uses the previous run's rows
+// for every source it did not reach. Saying "updated 2 min ago" over two-day-old
+// rows is the one way this page can actively mislead, so the age of the oldest
+// carried-over source is stated next to it.
+function staleLine(){
+  const n = D.stale_sources || 0, tot = D.sources_total || 0;
+  if(n > 0){
+    const age = D.oldest_source
+      ? ` — oldest ${esc(D.oldest_source)} (${esc(istAgo(D.oldest_source))})` : '';
+    return `<br><span class="stale">⚠ ${nf.format(n)} of ${nf.format(tot)} `+
+           `sources carried over from an earlier scrape${age}</span>`;
+  }
+  if(D.partial) return `<br><span class="stale">⚠ a scrape was still `+
+                       `running when this snapshot was built</span>`;
+  return '';
+}
 function stampLine(){
   $('stamp').innerHTML =
     `updated <b>${esc(istAgo(D.generated_at))}</b> `+
     `<span class="note">${esc(D.generated_at)}</span><br>`+
     `${nf.format(openNow())} tenders · closing within ${esc(D.window)} days`+
-    ` · rebuilt 00:00 &amp; 12:00 IST`;
+    ` · rebuilt 00:00 &amp; 12:00 IST`+
+    staleLine();
 }
 stampLine();
 

@@ -19,6 +19,7 @@ import json
 import os
 import shutil
 import subprocess
+import time
 import sys
 
 import keepawake
@@ -111,7 +112,18 @@ def main():
     with open(SRC, encoding="utf-8") as f:
         d = json.load(f)
     if d.get("partial"):
-        sys.exit("that scrape is still running; not uploading a partial dataset")
+        # A scrape killed mid-run leaves this flag set with nothing running,
+        # and the four portals only this machine can reach then go stale in
+        # the cloud until some later run happens to finish. GeM sat two days
+        # out of date that way. If the file has not moved in hours, the run
+        # that wrote it is gone: upload what it did collect. The cloud picker
+        # only adopts sources marked "ok", so a half-finished scrape can add
+        # to the published data but never subtract from it.
+        idle_h = (time.time() - os.path.getmtime(SRC)) / 3600
+        if idle_h < 3:
+            sys.exit("that scrape is still running; not uploading a partial dataset")
+        print(f"note: the last scrape died {idle_h:.0f} h ago and never "
+              f"finished; uploading the sources it did collect")
 
     # Only worth uploading if we actually hold the sources the cloud cannot get.
     blocked = {"GeM", "Andhra Pradesh", "Chhattisgarh", "Gujarat"}
