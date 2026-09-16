@@ -142,7 +142,9 @@ def build_payload(data, rows_override=None):
     # which keeps zero-count entries for exactly this reason.
     central = {"GeM", "ONGC", "Central (CPPP)", "Central (etenders)",
                "Defence (MoD)", "Coal India", "NTPC"}
-    geo_covered = len({s["state"] for s in data.get("sources", [])
+    # "Assam (departments)" is Assam again, not a 36th state: collapse the
+    # qualifier before counting, so no source can inflate this past 36
+    geo_covered = len({s["state"].split(" (")[0] for s in data.get("sources", [])
                        if s["state"] not in central})
     # A scrape that dies partway keeps the previous run's rows for every state
     # it did not reach, so generated_at can read minutes old while nearly all

@@ -324,7 +324,10 @@ function applyFilters(resetPage=true){
 function render(){
   const now=new Date();
   $('k-total').textContent=fmtN(VIEW.length);
-  $('k-states').textContent=new Set((META.sources||[]).map(s=>s.state).filter(x=>!CENTRAL.has(x))).size + ' of ' + GEO_TOTAL;
+  // "Assam (departments)" is Assam again, not a 36th state: collapse the
+  // qualifier before counting, so no source can inflate this past 36
+  $('k-states').textContent=new Set((META.sources||[]).map(s=>s.state)
+    .filter(x=>!CENTRAL.has(x)).map(x=>x.split(' (')[0])).size + ' of ' + GEO_TOTAL;
   $('k-48').textContent=fmtN(VIEW.filter(t=>t._close&&(t._close-now)/36e5>=0&&(t._close-now)/36e5<=48).length);
   $('k-week').textContent=fmtN(VIEW.filter(t=>t._close&&(t._close-now)/36e5>=0&&(t._close-now)/36e5<=168).length);
   $('k-new').textContent=fmtN(VIEW.filter(t=>t._pub&&(now-t._pub)/36e5<=24).length);
