@@ -84,7 +84,9 @@ BROWSER_SUPPORTED = ["Gujarat", "Bihar"]
 # Still uncovered.
 UNSUPPORTED = {
     "Karnataka": ("https://kppp.karnataka.gov.in",
-                  "KPPP - tender search is captcha-gated; not bypassed by design"),
+                  "KPPP - the tender listing is behind a Keycloak login (checked "
+                  "2026-09-16), so it needs a registered account; not scraped. "
+                  "Karnataka's GeM procurement still arrives via GeM."),
 }
 
 # Closing-window filter -> Tapestry submit name on FrontEndListTendersbyDate
