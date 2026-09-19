@@ -104,6 +104,13 @@ CONSULT = [
     r"\b(?:dpr|eoi)\s+preparation\b",
     r"\bmonitoring\s+and\s+evaluation\b",
     r"\bthird\s+party\s+(?:monitoring|verification|inspection)\b",
+    # skill development delivery. "skill" alone would sweep in 600 GeM
+    # manpower listings ("Skilled; ITI"), so it needs a programme-shaped
+    # noun after it; "skill development centre" is a building and stays out.
+    r"\bskill(?:s|ing)?\s+(?:development|training)\s+"
+    r"(?:programme|program|course|scheme|initiative|service\s+provider"
+    r"|provider|partner|agenc\w*|in\b)",
+    r"\btraining\s+(?:partner|agenc(?:y|ies)|service\s+provider)\b",
     # institutional / business
     r"\bcapacity\s+building\b",
     r"\binstitutional\s+strengthening\b",
@@ -182,7 +189,15 @@ CASES = [
     ("Techno Financial Audit of the work of EWS Site development", "consult"),
     ("Environment Impact Assessment for the irrigation canal", "consult"),
     ("Third Party Inspection of works", "consult"),
+    ("Implementation of Skill Training in Driving in every MCLA Constituency", "consult"),
+    ("RFP for Selection of Skill Training Service Provider", "consult"),
+    ("Empanelment of Training Agencies as Training Partner", "consult"),
+    ("Soft Skill Training Programme for Students", "consult"),
     # neither
+    ("Manpower Outsourcing Services - Minimum wage - Skilled; ITI; Others", ""),
+    ("Construction of Skill Centre at GDC Bhaderwah", ""),
+    ("Improvements to Multi Purpose Skill Development Centre at Venkatapuram", ""),
+    ("Skill Development Training and Associated Documents Folders (qty 497)", ""),
     ("Repairs to road side in ward no. 3 of PMC of Ponda Constituency", ""),
     ("Construction of 500 seater Auditorium", ""),
     ("AS 9110C AWARENESS & INTERNAL AUDITOR TRAINING COURSE", ""),
