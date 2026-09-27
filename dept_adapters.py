@@ -97,6 +97,11 @@ SITES = [
      "/resource/tenders-0"),
     (TRIPURA, "Tripura State Pollution Control Board", "tspcb.tripura.gov.in",
      "/resource/tenders"),
+    # Publishes its own RFPs and nothing else indexes them: the 2026-27
+    # audit-firm empanelment appeared here and in no portal, no ICAI listing
+    # and no search engine. Note the domain -- the bank moved to .bank.in and
+    # tscb.co.in is now only a splash page, which is why it looked absent.
+    (TRIPURA, "Tripura State Co-operative Bank", "tscb.bank.in", "/tender"),
 ]
 
 NOTICE = re.compile(
@@ -145,6 +150,17 @@ def parse_listing(html, base):
         out.append((title, m.group(1), d.group(0) if d else "", ref))
         prev = chunk
 
+    if not out and "pxl--item" in html:
+        # Download-grid page: the title sits in one div and the PDF in a
+        # sibling anchor further down, with no row to bound them. Split on the
+        # item marker rather than trying to match balanced divs -- the naive
+        # non-greedy pattern closes before reaching the anchor.
+        for chunk in html.split('class="pxl--item"')[1:]:
+            m = PDF.search(chunk)
+            t = re.search(r'pxl-item--name[^>]*>(.*?)<', chunk, re.S)
+            if m and t:
+                out.append((_text(t.group(1)), m.group(1), "", ""))
+
     if not out:                                   # list-shaped page
         for chunk in ITEM.findall(html):
             m = PDF.search(chunk)
@@ -156,7 +172,9 @@ def parse_listing(html, base):
 
     seen, keep = set(), []
     for title, url, up, ref in out:
-        if not url.startswith("http"):
+        if url.startswith("//"):
+            url = "https:" + url          # protocol-relative, already absolute
+        elif not url.startswith("http"):
             url = base.rstrip("/") + "/" + url.lstrip("/")
         title = htmllib.unescape(title)
         # a title shorter than this is a label like "NIT", not a tender; and a
