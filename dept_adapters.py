@@ -269,7 +269,7 @@ def scrape(label=ASSAM, days=120, workers=6, max_pdfs=200):
     cache = load_cache()
     since = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
     recent = (datetime.now() - timedelta(days=45)).strftime("%Y-%m-%d")
-    rows, notes = [], []
+    rows, notes, notes_by_site = [], [], []
     with cf.ThreadPoolExecutor(max_workers=workers) as ex:
         budget = {"left": max_pdfs}
         futs = [ex.submit(scrape_site, s, lb, n, h, p, cache, since, recent, budget)
@@ -278,13 +278,21 @@ def scrape(label=ASSAM, days=120, workers=6, max_pdfs=200):
             name, got, note = f.result()
             rows.extend(got)
             notes.append(f"{name}: {note}")
+            notes_by_site.append((name, note))
     save_cache(cache)
     dated = sum(1 for r in rows if r["closing"])
     live = len({r["organisation"] for r in rows})
     total = sum(1 for lb, *_ in SITES if lb == label)
+    # Name the sites that failed. The aggregate count alone cannot tell a
+    # body that published nothing from one the runner could not reach, and
+    # that difference is the whole diagnosis when the cloud and the laptop
+    # disagree.
+    bad = [n for n, note_ in notes_by_site if note_.startswith(("ERROR", "HTTP"))]
     note = (f"{len(rows)} notices from {live} of {total} "
             f"{label.split(' (')[0]} bodies, "
             f"{dated} with a deadline read from the PDF")
+    if bad:
+        note += f"; unreachable: {', '.join(bad[:4])}"
     return label, rows, note
 
 
