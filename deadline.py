@@ -37,6 +37,10 @@ WORDED = re.compile(
 # and quoting it as the deadline would send someone to a closed tender.
 CUE = re.compile(
     r"(on or before|last date(?: and time)?(?: of)?|due date|closing date"
+    # GeM bid documents, which is what ICAI indexes for many entries, label it
+    # "Bid End Date/Time". "Bid Opening Date" sits two lines later and must not
+    # match -- it is a day after the deadline and would point at a closed bid.
+    r"|bid end date(?:/time)?|bid submission end date|end date(?:/time)? of bid"
     r"|last day|to be submitted|shall be submitted|should be submitted"
     r"|submission of (?:bid|tender|proposal)s?|receipt of (?:bid|tender|proposal)s?"
     r"|bid submission|tender submission|upto|up to|till)", re.I)

@@ -466,6 +466,12 @@ def scrape_ongc(state="ONGC", host="tenders.ongc.co.in", timeout=90):
 
 # --------------------------------------------------------------------- registry
 
+def scrape_icai(state, host, timeout=180):
+    """CA-firm tenders from ICAI's index. Imported lazily; it pulls in a PDF parser."""
+    import icai_adapter
+    return icai_adapter.scrape()
+
+
 def scrape_dept_sites(state, host, timeout=180):
     """Notices on Assam departmental sites, which no procurement portal lists.
 
@@ -485,6 +491,10 @@ CUSTOM = {
     "ONGC":           (scrape_ongc, "tenders.ongc.co.in"),
     "Assam (departments)":   (scrape_dept_sites, "assam.gov.in"),
     "Tripura (departments)": (scrape_dept_sites, "tripura.gov.in"),
+    # CA-firm work -- concurrent and statutory audits -- is largely issued by
+    # bodies that never reach GePNIC: co-operative banks, boards, societies.
+    # ICAI indexes it nationally.
+    "CA tenders (ICAI)":    (scrape_icai, "tmdicai.org"),
 }
 
 

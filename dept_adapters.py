@@ -190,10 +190,12 @@ def deadline_for(s, url, cache):
         return cache[url]
     got = ""
     try:
-        r = s.get(url, timeout=45, verify=False, stream=True)
-        if r.status_code == 200:
-            data = r.raw.read(6_000_000, decode_content=True)
-            got = DL.find_deadline(DL.text_from_pdf(data))
+        r = s.get(url, timeout=45, verify=False)
+        # r.content, not a capped read off r.raw: a truncated body makes pypdf
+        # fail with "EOF marker not found", indistinguishable from a PDF that
+        # simply has no deadline in it.
+        if r.status_code == 200 and len(r.content) <= 12_000_000:
+            got = DL.find_deadline(DL.text_from_pdf(r.content))
     except Exception:                                     # noqa: BLE001
         return ""                                          # retry next run
     cache[url] = got
