@@ -495,6 +495,7 @@ CUSTOM = {
     # bodies that never reach GePNIC: co-operative banks, boards, societies.
     # ICAI indexes it nationally.
     "CA tenders (ICAI)":    (scrape_icai, "tmdicai.org"),
+    "Bank audits":          (scrape_dept_sites, "bank.in"),
 }
 
 

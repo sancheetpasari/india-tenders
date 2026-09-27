@@ -116,6 +116,26 @@ def find_deadline(text, now=None):
     return best.strftime("%d-%b-%Y %I:%M %p")
 
 
+def closed_already(text, now=None):
+    """True when the notice names a submission date that has passed.
+
+    find_deadline() returns "" both for a tender that closed last year and
+    for one whose date it could not read, and those want different handling:
+    the first should be dropped, the second shown without a countdown. This
+    says which it is.
+    """
+    now = now or datetime.now(IST)
+    text = re.sub(r"\s+", " ", text or "")
+    if not text:
+        return False
+    for cue in CUE.finditer(text):
+        for start, end, dt in _dates(text):
+            gap = start - cue.end()
+            if 0 <= gap <= MAX_GAP:
+                return dt < now - timedelta(days=1)
+    return False
+
+
 def text_from_pdf(data, max_pages=4):
     try:
         from pypdf import PdfReader

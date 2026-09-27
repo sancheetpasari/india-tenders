@@ -50,6 +50,22 @@ CACHE = os.path.join(HERE, ".cache", "deadlines.json")
 # their GePNIC portal, which the dashboard already reads.
 ASSAM = "Assam (departments)"
 TRIPURA = "Tripura (departments)"
+BANKS = "Bank audits"
+
+# Banks issue concurrent, revenue and forensic audit work that reaches no
+# procurement portal. Of 110 Indian banks checked, these are the ones with a
+# reachable tender page; the rest are not on .bank.in under a guessable name,
+# and the ~350 district central co-operative banks mostly have no site at all.
+# Only audit-tagged titles are kept: of 579 entries here, 17 are audit work --
+# the rest is IT hardware, premises and security contracts.
+BANK_REGION = {
+    "uco.bank.in": "West Bengal", "idbi.bank.in": "Maharashtra",
+    "indusind.bank.in": "Maharashtra", "cityunionbank.bank.in": "Tamil Nadu",
+    "unionbankofindia.bank.in": "Maharashtra", "canarabank.bank.in": "Karnataka",
+    "nainitalbank.bank.in": "Uttarakhand", "bankofbaroda.bank.in": "Gujarat",
+    "tnsc.bank.in": "Tamil Nadu", "apcob.bank.in": "Andhra Pradesh",
+    "tscb.bank.in": "Tripura",
+}
 
 # Discovered by probing all 196 bodies listed at assam.gov.in/departments-list
 # for a tenders page. Re-check with --probe; sites come and go.
@@ -102,6 +118,17 @@ SITES = [
     # and no search engine. Note the domain -- the bank moved to .bank.in and
     # tscb.co.in is now only a splash page, which is why it looked absent.
     (TRIPURA, "Tripura State Co-operative Bank", "tscb.bank.in", "/tender"),
+    (BANKS, "UCO Bank", "uco.bank.in", "/tenders"),
+    (BANKS, "IDBI Bank", "idbi.bank.in", "/tender"),
+    (BANKS, "IndusInd Bank", "indusind.bank.in", "/tender"),
+    (BANKS, "City Union Bank", "cityunionbank.bank.in", "/tender"),
+    (BANKS, "Union Bank of India", "unionbankofindia.bank.in", "/tender"),
+    (BANKS, "Canara Bank", "canarabank.bank.in", "/tender"),
+    (BANKS, "Nainital Bank", "nainitalbank.bank.in", "/tender"),
+    (BANKS, "Bank of Baroda", "bankofbaroda.bank.in", "/tenders"),
+    (BANKS, "TNSC Bank", "tnsc.bank.in", "/tender"),
+    (BANKS, "Andhra Pradesh State Co-operative Bank", "apcob.bank.in", "/tender"),
+    (BANKS, "Tripura State Co-operative Bank", "tscb.bank.in", "/tender"),
 ]
 
 NOTICE = re.compile(
@@ -213,7 +240,12 @@ def deadline_for(s, url, cache):
         # fail with "EOF marker not found", indistinguishable from a PDF that
         # simply has no deadline in it.
         if r.status_code == 200 and len(r.content) <= 12_000_000:
-            got = DL.find_deadline(DL.text_from_pdf(r.content))
+            text = DL.text_from_pdf(r.content)
+            got = DL.find_deadline(text)
+            # "" means either closed or unreadable, and those want opposite
+            # handling: drop the first, show the second without a countdown.
+            if not got and DL.closed_already(text):
+                got = "CLOSED"
     except Exception:                                     # noqa: BLE001
         return ""                                          # retry next run
     cache[url] = got
@@ -248,16 +280,28 @@ def scrape_site(s, label, name, host, path, cache, since, recent, budget):
                 pub = datetime.strptime(up, "%Y-%m-%d").strftime("%d-%b-%Y")
             except ValueError:
                 pub = ""
-        t = {"state": label, "region": label.split(" (")[0], "sector": "",
+        t = {"state": label,
+             "region": BANK_REGION.get(host, "") if label == BANKS
+                       else label.split(" (")[0],
+             "sector": "",
              "tender_id": ref[:60], "ref_no": ref[:60], "title": title,
              "organisation": name, "published": pub, "closing": closing,
              "opening": "", "corrigendum": "", "ecv": "",
              "portal": base + path, "detail_url": url}
         t["sector"] = sector.tag(t)
+        # A bank's tender page is mostly hardware and premises work. This
+        # source exists for the audit engagements, so keep only those.
+        if label == BANKS and t["sector"] != "ca":
+            continue
         # Keep what could still be bid for: a deadline in the future, or no
         # deadline but posted recently enough to be live. Without this the
         # dashboard fills with notices that closed months ago.
-        if not closing and (not up or up < recent):
+        if closing == "CLOSED":
+            continue                      # the notice names a date that passed
+        # Bank pages carry no upload date, so "undated" here means unknown,
+        # not old -- dropping those on age would discard the whole source.
+        # Anything the PDF proved closed has already gone, just above.
+        if not closing and label != BANKS and (not up or up < recent):
             continue
         rows.append(t)
     return name, rows, f"{len(rows)} from {len(entries)} listed"
