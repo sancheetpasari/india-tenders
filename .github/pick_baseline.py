@@ -19,7 +19,7 @@ import gzip
 import json
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 MON = {m: i + 1 for i, m in enumerate(
     ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -35,6 +35,19 @@ def stamp(s):
         return datetime(int(m.group(3)), MON[m.group(2)], int(m.group(1)),
                         int(m.group(4)), int(m.group(5)))
     return datetime.min
+
+
+SITES = re.compile(r"(\d+)\s+of\s+(\d+)\s+\S+.*?bodies")
+
+
+def covered(note):
+    """How many of a multi-site source's sites a run actually read.
+
+    Sources that read one portal say nothing of the sort; they return 1 so a
+    straight comparison never fires on them and the stale rule still governs.
+    """
+    m = SITES.search(note or "")
+    return int(m.group(1)) if m else 1
 
 
 def load(name, label):
@@ -85,7 +98,24 @@ for c in sorted(cands, key=lambda c: -c["when"].timestamp()):
         # publish is the newer *file* while holding the older *source*.
         mine, theirs = s.get("scraped_at"), srcs.get(st, {}).get("scraped_at")
         newer = not (mine and theirs) or stamp(mine) > stamp(theirs)
-        if st in stale and s.get("status") == "ok" and s.get("count") and newer:
+
+        # A source that reads many sites can half-succeed. The runner reached
+        # 3 of 11 banks and marked the source "ok", which hid the laptop's 4
+        # of 11 -- tscb.bank.in refuses GitHub's IPs, so the one tender that
+        # mattered was in the laptop's copy and nowhere else. "ok" is not the
+        # question; how much of the source each side actually got is.
+        wider = covered(s.get("note")) > covered(srcs.get(st, {}).get("note"))
+
+        # A wider copy is worth having even when it is the older one. The
+        # sites the cloud cannot reach it will never reach, so waiting for a
+        # fresher cloud run does not recover them -- but a copy left behind
+        # for days should not win either, hence the day's grace.
+        day = timedelta(days=1, hours=12)
+        recent_enough = (not (mine and theirs)
+                         or stamp(mine) > stamp(theirs) - day)
+
+        if s.get("status") == "ok" and s.get("count") \
+                and ((st in stale and newer) or (wider and recent_enough)):
             by_state[st] = rows.get(st, [])
             srcs[st] = dict(s)
             when = s.get("scraped_at") or c["data"].get("generated_at")
