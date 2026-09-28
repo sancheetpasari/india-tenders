@@ -75,7 +75,11 @@ jobs:
         # itself. Sweeping 42 government portals again to correct a label is
         # not a courteous use of their bandwidth.
         if: ${{ !inputs.skip_scrape }}
-        run: python scraper.py --window 14 --workers 12 --passes 5 --conc 3 --deadline 900
+        # Bank audits is left to the laptop. The runner reaches 3 of its 11
+        # banks and that partial result would overwrite the laptop's 4 --
+        # tscb.bank.in refuses these IPs, so the one that matters is only
+        # ever in the laptop's copy.
+        run: python scraper.py --window 14 --workers 12 --passes 5 --conc 3 --deadline 900 --skip "Bank audits"
 
       - name: Sanity-check the harvest
         env:

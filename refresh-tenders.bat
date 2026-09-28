@@ -11,7 +11,9 @@ rem sources GitHub can reach, and scrape only the four that refuse its runners.
 rem That is about fourteen minutes, which does fit in a waking window.
 cd /d "%~dp0"
 python pull_cloud.py >> refresh-history.log 2>&1
-python scraper.py --states GeM Gujarat "Andhra Pradesh" Chhattisgarh --deadline 900 >> refresh-history.log 2>&1
+rem "Bank audits" belongs here too: tscb.bank.in refuses GitHub's runners,
+rem so it is a fifth source only this machine can reach.
+python scraper.py --states GeM Gujarat "Andhra Pradesh" Chhattisgarh "Bank audits" --deadline 900 >> refresh-history.log 2>&1
 python build_artifact.py >> refresh-history.log 2>&1
 python push_to_cloud.py >> refresh-history.log 2>&1
 if errorlevel 1 goto :eof

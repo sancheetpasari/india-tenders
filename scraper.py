@@ -410,17 +410,28 @@ def main():
                     help="skip the Playwright-driven states (Gujarat, Bihar)")
     ap.add_argument("--no-custom", action="store_true",
                     help="skip the non-GePNIC states handled by adapters.py")
+    ap.add_argument("--skip", nargs="*", default=[],
+                    help="sources to leave alone, carrying forward whatever the "
+                         "baseline holds. For a source this machine reads worse "
+                         "than the machine that supplied the baseline: scraping "
+                         "it here would overwrite the better copy with a partial "
+                         "one, which is how a half-reachable source loses data.")
     ap.add_argument("--outdir", default=".")
     args = ap.parse_args()
     keepawake.keep_awake(log=log)
 
+    skip = set(args.skip or [])
     targets = [(s, h, c) for s, h, c in portals.active_portals()
-               if not args.states or s in args.states]
+               if (not args.states or s in args.states) and s not in skip]
     custom = [s for s in portals.CUSTOM_SUPPORTED
-              if (not args.states or s in args.states) and not args.no_custom]
+              if (not args.states or s in args.states)
+              and not args.no_custom and s not in skip]
     browser = [s for s in portals.BROWSER_SUPPORTED
                if (not args.states or s in args.states)
-               and not args.no_custom and not args.no_browser]
+               and not args.no_custom and not args.no_browser and s not in skip]
+    if skip:
+        log("leaving alone (the baseline holds a better copy): "
+            + ", ".join(sorted(skip)))
     log(f"Scraping {len(targets)} GePNIC portals (window={args.window} days, "
         f"up to {args.passes} passes) + {len(custom)} custom-platform states"
         f" + {len(browser)} browser-driven states\n")

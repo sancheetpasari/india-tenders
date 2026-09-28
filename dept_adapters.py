@@ -117,7 +117,7 @@ SITES = [
     # audit-firm empanelment appeared here and in no portal, no ICAI listing
     # and no search engine. Note the domain -- the bank moved to .bank.in and
     # tscb.co.in is now only a splash page, which is why it looked absent.
-    (TRIPURA, "Tripura State Co-operative Bank", "tscb.bank.in", "/tender"),
+    # (the co-operative bank lives under Bank audits now, not here twice)
     (BANKS, "UCO Bank", "uco.bank.in", "/tenders"),
     (BANKS, "IDBI Bank", "idbi.bank.in", "/tender"),
     (BANKS, "IndusInd Bank", "indusind.bank.in", "/tender"),
